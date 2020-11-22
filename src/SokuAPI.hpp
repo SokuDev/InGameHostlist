@@ -27,12 +27,15 @@
 //#define INPUT_CLICKED_A (((int*)CINPUTMANAGERCLUSTER_OBJ)[0x10])
 //#define INPUT_CLICKED_B (((int*)CINPUTMANAGERCLUSTER_OBJ)[0x11])
 
+#define PROFILE1_DECKNAME ((VC9String *)0x0899840)
+#define PROFILE2_DECKNAME ((VC9String *)0x089985C)
+
 #define SFX_PLAY_FUNPTR 0x043e1e0
 #define SFX_MOVE 0x27
 #define SFX_SELECT 0x28
 #define SFX_BACK 0x29
 
-typedef struct {
+struct CInputManagerCluster {
     byte UNKNOWN[56];
     struct {
         int Xaxis;
@@ -44,9 +47,9 @@ typedef struct {
         int E;
         int F;
     } P1;
-} CInputManagerCluster;
+};
 
-typedef struct {
+struct CDesignSprite {
     void* vftable; // =008576ac 
     float UNKNOWN_1[2];
     float x;
@@ -54,9 +57,9 @@ typedef struct {
     byte active;
     byte UNKNOWN_2[3];
     int UNKNOWN_3;
-} CDesignSprite;
+};
 
-typedef struct {
+struct CMenuConnect {
     void* vftable;
     void* CNetworkBasePtr;
     byte Choice;
@@ -87,18 +90,43 @@ typedef struct {
     byte UNKNOWN_10[171];
     byte UnknownJoinFlag;
     byte UNKNOWN_12[835];
-} CMenuConnect;
+};
+
+struct VC9String {
+    enum { _BUF_SIZE = 16 };
+
+    void* alloc;
+    union {
+        char buf[16];
+        char* ptr;
+    } body;
+    size_t size;
+    size_t bufsize;
+
+    operator char* () {
+        return bufsize >= _BUF_SIZE ? body.ptr : body.buf;
+    }
+    operator const char* () const {
+        return bufsize >= _BUF_SIZE? body.ptr : body.buf;
+    }
+};
 
 namespace SokuAPI {
     auto SfxPlay = (char (*)(int))SFX_PLAY_FUNPTR;
 
-    PatchMan::MultiPatch InputBlock, HideProfiles;
+    PatchMan::MultiPatch InputBlock, HideProfiles, InputWorkaround;
+
+    VC9String Profile1, Profile2;
 
     void Init() {
         InputBlock.AddPatch(0x0448e4a, "\x30\xC0\x90\x90\x90")
             .AddPatch(0x0448e5d, "\x3C\x01\x90\x90")
             .AddPatch(0x0449120, "\x85\xC9\x90\x90");
         HideProfiles.AddNOPs(0x0445e36, 7);
+        //This one is kinda hackish, avoids the check if address.txt and history.txt exist
+        //Since soku doesn't change choices otherwise.
+        InputWorkaround.AddNOPs(0x0448f52, 8)
+            .AddNOPs(0x0448f2e, 8);
     }
 
     CMenuConnect* GetCMenuConnect() {
@@ -111,6 +139,15 @@ namespace SokuAPI {
 
     CInputManagerCluster* GetInputManager() { 
         return (CInputManagerCluster*)CINPUTMANAGERCLUSTER_OBJ;
+    }
+
+    string GetProfileName(int id) {
+        if (id < 1 || id > 2) {
+            return NULL;
+        }
+        string deckname = string(id == 1 ? *PROFILE1_DECKNAME : *PROFILE2_DECKNAME);
+        int dotpos = deckname.find_last_of('.');
+        return deckname.substr(0, dotpos);
     }
 
     //NOTE: This leaves the exit button
@@ -135,7 +172,7 @@ namespace SokuAPI {
     }
 
     void JoinHost(const char* ip, uint port, bool spectate = false) {
-      typedef void(__thiscall* func)(void*);
+        typedef void(__thiscall* func)(void*);
         func JoinFun = (func)0x0446b20;
 
         CMenuConnect* menu = GetCMenuConnect();

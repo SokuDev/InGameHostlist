@@ -22,8 +22,6 @@
     <ClCompile Include="src\dllmain.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\imgui.h" />
-    <ClInclude Include="include\SokuLib.h" />
     <ClInclude Include="src\Host.hpp" />
     <ClInclude Include="src\HostingOptions.hpp" />
     <ClInclude Include="src\Hostlist.hpp" />

@@ -16,7 +16,7 @@ namespace HostingOptions
 	char message[256] = { 0 };
 
 	void SaveConfig() {
-		ofstream ofs("Modules/HostBotInt/config.json");
+		ofstream ofs("Modules/Soku-Hostlist/config.json");
 		JSON config = {
 			"HostingOptions", {
 				"port", port,

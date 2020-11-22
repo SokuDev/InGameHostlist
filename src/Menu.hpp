@@ -35,7 +35,7 @@ namespace Menu
 		ImGui::SetNextWindowPos(ImVec2(0, 0));
 		ImGui::Begin("##menu", 0, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoSavedSettings);
 		ImGui::PushFont(menuFont);
-		for (uint i = 0; i < menuText.size(); ++i) {
+		for (unsigned int i = 0; i < menuText.size(); ++i) {
 			ImGui::SetCursorPos(ImVec2(64 + 2, 125 + 32 * i + 2));
 			ImGui::TextColored((ImVec4)ImColor(0, 0, 0, 80), menuText[i].c_str());
 			ImGui::SetCursorPos(ImVec2(64, 125 + 32 * i));

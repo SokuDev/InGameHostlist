@@ -30,7 +30,7 @@ namespace Hostlist
     bool active = false;
 
     int page_id = WAITING;
-    int ip_id = 0;
+    unsigned int ip_id = 0;
 
     unsigned long oldTime = 0;
     unsigned long newTime = 0;
@@ -160,7 +160,7 @@ namespace Hostlist
             ImGui::TextColored((page_id == PLAYING)? colorNormal : colorGrayedOut, "Playing(%d)", hosts[PLAYING].size());
 
             if (page_id == WAITING) {
-                ImGui::Columns(3, "waiting");
+                ImGui::Columns(3, "waiting"); 
                 ImGui::SetColumnWidth(0, 100);
                 ImGui::SetColumnWidth(1, 153);
                 ImGui::SetColumnWidth(2, 32);
@@ -172,8 +172,8 @@ namespace Hostlist
                 if (hosts[WAITING].size() > 0) {
                     ImGui::Separator(); //Necessary to avoid graphical glitches
 
-                    const int start_pos = ip_id - (ip_id % 15);
-                    for (int i = start_pos; i < start_pos + 15; i++) {
+                    unsigned int start_pos = ip_id - (ip_id % 15);
+                    for (unsigned int i = start_pos; i < start_pos + 15; i++) {
                         if (i < hosts[WAITING].size()) {
                             ImGui::PushID(i);
 
@@ -209,8 +209,8 @@ namespace Hostlist
                 if (hosts[PLAYING].size() > 0) {
                     ImGui::Separator(); //Necessary to avoid graphical glitches
 
-                    const int start_pos = ip_id - (ip_id % 15);
-                    for (int i = start_pos; i < start_pos + 15; i++) {
+                    unsigned int start_pos = ip_id - (ip_id % 15);
+                    for (unsigned int i = start_pos; i < start_pos + 15; i++) {
                         if (i < hosts[PLAYING].size()) {
                             ImGui::PushID(i);
 

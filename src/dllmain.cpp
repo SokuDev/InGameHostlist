@@ -46,9 +46,11 @@ SOKU_MODULE EntryPoint()
             
             if (HostingOptions::publicHost) {
                 JSON data = {
+                    "profile_name", SokuAPI::GetProfileName(1),
                     "message", HostingOptions::message,
-                    "port", HostingOptions::port
+                    "port", HostingOptions::port,
                 };
+                //TODO: Add proper error checking.
                 WebHandler::Put("http://delthas.fr:14762/games", data.dump());
             }
         }
@@ -103,6 +105,7 @@ SOKU_MODULE EntryPoint()
 
                 HostingOptions::enabled = false;
                 SokuAPI::InputBlock.Toggle(false);
+                SokuAPI::InputWorkaround.Toggle(true);
                 hosting = false;
                 
                 firstTime = false;
