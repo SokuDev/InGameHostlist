@@ -3,26 +3,23 @@
 #include <json.hpp>
 using namespace std;
 using namespace json;
-using namespace PingMan;
 
-class Host {
-    string _ipstr;
-    size_t _sep;
-
-public:
+struct Host {
     string name;
     string message;
     string ip;
     short port;
     bool spectateable;
-
     bool playing;
     string opponentName;
 
-    PingAsync ping;
+    long netIp;
+    short netPort;
 
     Host(const string &name, const string &msg, const string &ip, short port) : 
-        name(name), message(msg), ip(ip), port(port), spectateable(false), playing(false), ping(ip.c_str(), port) {
+        name(name), message(msg), ip(ip), port(port), spectateable(false), playing(false) {
+        netIp = inet_addr(ip.c_str());
+        netPort = htons(port);
     }
 
     Host(JSON &jHost) : 
@@ -30,11 +27,13 @@ public:
         message(jHost["message"].ToString()),
         spectateable(jHost["spectateable"].ToBool()),
         playing(jHost["started"].ToBool()), 
-        opponentName(jHost["client_name"].ToString()),
-        _ipstr(jHost["ip"].ToString()),
-        _sep(_ipstr.find(':')),
-        ip(_ipstr.substr(0, _sep)),
-        port(stoi(_ipstr.substr(_sep + 1, _ipstr.length()), nullptr)),
-        ping(PingAsync(ip.c_str(), port)) {
+        opponentName(jHost["client_name"].ToString())
+    {
+        string _ipstr = jHost["ip"].ToString();
+        size_t _sep = _ipstr.find(':');
+        ip = _ipstr.substr(0, _sep);
+        port = stoi(_ipstr.substr(_sep + 1));
+        netIp = inet_addr(ip.c_str());
+        netPort = htons(port);
     }
 };

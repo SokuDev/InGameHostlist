@@ -121,11 +121,7 @@ namespace Hostlist
             }
 
             //Ping update
-            for (uint page = 0; page < PAGE_COUNT; page++) {
-                for (uint i = 0; i < hosts[page].size(); i++) {
-                    hosts[page][i]->ping.Update(newTime);
-                }
-            }
+            PingMan::Update(newTime);
         }
     }
 
@@ -183,8 +179,8 @@ namespace Hostlist
                             ImGui::Text("%s", hosts[WAITING][i]->message.c_str());
                             ImGui::NextColumn();
 
-                            long ping = hosts[WAITING][i]->ping.GetPing();
-                            if (ping != PING_UNINITIALIZED)
+                            long ping = PingMan::Ping(*hosts[WAITING][i]);
+                            if (ping != PingMan::PING_UNINITIALIZED)
                                 ImGui::TextColored(((ping >= 0) ? colorNormal : colorError), "%ld", ping);
                             else
                                 ImGui::Text("...");
@@ -220,8 +216,8 @@ namespace Hostlist
                             ImGui::Text("%s", hosts[PLAYING][i]->opponentName.c_str());
                             ImGui::NextColumn();
 
-                            long ping = hosts[PLAYING][i]->ping.GetPing();
-                            if (ping != PING_UNINITIALIZED)
+                            long ping = PingMan::Ping(*hosts[PLAYING][i]);
+                            if (ping != PingMan::PING_UNINITIALIZED)
                                 ImGui::TextColored(((ping >= 0)? colorNormal : colorError),"%ld", ping);
                             else
                                 ImGui::Text("...");

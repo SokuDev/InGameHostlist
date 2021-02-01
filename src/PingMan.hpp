@@ -1,9 +1,11 @@
 #pragma once
 #include <winsock2.h>
-#include <ws2tcpip.h>
+#include <unordered_map>
 #include <windows.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "Host.hpp"
+#include "Status.hpp"
 
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
@@ -30,7 +32,18 @@ namespace PingMan {
 		PACKET_OLLEH = 3
 	};
 
+	struct PingInfo {
+		long oldTime;
+		long ping;
+		bool waiting;
+
+		PingInfo() : oldTime(0), ping(PING_UNINITIALIZED), waiting(false) {};
+	};
+
 	WSADATA wsa;
+	char message[MESSAGE_LEN];
+	std::unordered_map<long, PingInfo> pings;
+	SOCKET sock = INVALID_SOCKET;
 
 	//Helper functions
 	namespace {
@@ -57,32 +70,36 @@ namespace PingMan {
 			return 0;
 		}
 
-		int SocketReceive(SOCKET s, long timout_s = 0, long timeout_us = 0) {
-			static fd_set fds;
-			static TIMEVAL tv;
+		int SocketSend(SOCKET s, long ip, short port) {
+			SOCKADDR_IN addr;
 
-			FD_ZERO(&fds);
-			FD_SET(s, &fds);
+			addr.sin_family = AF_INET;
+			addr.sin_port = port;
+			addr.sin_addr.S_un.S_addr = ip;
 
-			tv.tv_sec = timout_s;
-			tv.tv_usec = timeout_us;
+			MessageSetup(message, &addr);
 
-			int ret;
-			if ((ret = select(s, &fds, NULL, NULL, &tv)) == 0) {
-				return ERROR_PINGTIMEOUT;
+			if (sendto(sock, message, MESSAGE_LEN, 0, (SOCKADDR*)&addr, sizeof(addr)) == SOCKET_ERROR) {
+				printf("[WinSock] sendto() failed with error code: %d", WSAGetLastError());
+				return ERROR_SENDTOFAILED;
 			}
-			else if (ret == SOCKET_ERROR) {
-				printf("[WinSock] select() failed with error code: %d\n", WSAGetLastError());
-				return ERROR_SELECTFAILED;
-			}
+		}
 
+		int SocketReceive(SOCKET s, long *ip) {
 			char response;
-			if (recvfrom(s, &response, sizeof(response), NULL, NULL, NULL) == SOCKET_ERROR) {
+			SOCKADDR_IN addr;
+			int addr_len = sizeof(addr);
+			if (recvfrom(sock, &response, sizeof(response), NULL, (SOCKADDR*)&addr, &addr_len) == SOCKET_ERROR) {
 				printf("[WinSock] recvfrom() failed with error code : %d", WSAGetLastError());
 				return ERROR_RECVFROMFAILED;
 			}
 
-			return response;
+			if (response == PACKET_OLLEH) {
+				*ip = addr.sin_addr.S_un.S_addr;
+				return 0;
+			}
+			else
+				return ERROR_INVALIDRESPONSE;
 		}
 	};
 
@@ -92,6 +109,11 @@ namespace PingMan {
 			printf("[WinSock] Winsock Init failed with error code: %d", WSAGetLastError());
 			return ERROR_INITFAILED;
 		}
+
+		if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR) {
+			printf("[WinSock] socket() failed with error code: %d", WSAGetLastError());
+			return ERROR_SOCKETFAILED;
+		}
 		return 0;
 	}
 
@@ -99,118 +121,52 @@ namespace PingMan {
 		WSACleanup();
 	}
 
-	long PingSync(const char* ipstr, short port) {
-		SOCKADDR_IN addr;
-		SOCKET s = INVALID_SOCKET;
-		char response = 0;
-		char message[MESSAGE_LEN];
-
-		SockAddrInSetup(&addr, ipstr, port);
-
-		if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR) {
-			printf("[WinSock] socket() failed with error code: %d", WSAGetLastError());
-			return ERROR_SOCKETFAILED;
+	//Credits to cc for the central ping manager idea.
+	long Ping(long ip, short port) {
+		long newTime = GetTickCount();
+		PingInfo& ping = pings[ip];
+		if(ping.waiting == false && newTime - ping.oldTime > PING_UPDATE_RATE) { 
+			ping.waiting = true;
+			ping.oldTime = newTime;
+			
+			SocketSend(sock, ip, port);
 		}
-
-		MessageSetup(message, &addr);
-
-		long startTime = GetTickCount();
-
-		if (sendto(s, message, MESSAGE_LEN, 0, (SOCKADDR*)&addr, sizeof(addr)) == SOCKET_ERROR) {
-			printf("[WinSock] sendto() failed with error code: %d", WSAGetLastError());
-			closesocket(s);
-			return ERROR_SENDTOFAILED;
-		}
-
-		int res = SocketReceive(s, 1);
-		if (res < 0) {
-			closesocket(s);
-			return res;
-		}
-
-		long endTime = GetTickCount();
-
-		closesocket(s);
-
-		return endTime - startTime;
+		//All (successful) branches converge here
+		return ping.ping;
 	}
 
-	class PingAsync {
-		SOCKET s;
-		bool waiting;
-		int error;
+	long Ping(Host& host) {
+		return Ping(host.netIp, host.netPort);
+	}
 
-		SOCKADDR_IN addr;
+	int Update(long time) {
+		static fd_set fds;
+		static TIMEVAL tv;
 
-		long startTime;
-		long lastPing;
+		FD_ZERO(&fds);
+		FD_SET(sock, &fds);
 
-		long lastTime;
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
 
-		char message[MESSAGE_LEN];
+		int packetCount; //Returns the amount of unprocessed packets?
+		if ((packetCount = select(sock, &fds, NULL, NULL, &tv)) == 0) {
+			return ERROR_PINGTIMEOUT;
+		}
+		else if (packetCount == SOCKET_ERROR) {
+			printf("[WinSock] select() failed with error code: %d\n", WSAGetLastError());
+			return ERROR_SELECTFAILED;
+		}
 
-	public:
-		PingAsync(const char* ipstr, short port) {
-			error = 0;
-			waiting = false;
-
-			lastPing = PING_UNINITIALIZED;
-			startTime = 0;
-			lastTime = 0;
-
-			SockAddrInSetup(&addr, ipstr, port);
-
-			if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR) {
-				printf("[WinSock] socket() failed with error code: %d", WSAGetLastError());
-				error = ERROR_SOCKETFAILED;
-				return;
+		long ip;
+		while(packetCount--) {
+			if (SocketReceive(sock, &ip) == 0) {
+				PingInfo& ping = pings[ip];
+				ping.waiting = false;
+				ping.ping = time - ping.oldTime;
+				ping.oldTime = time;
 			}
-
-			MessageSetup(message, &addr);
 		}
-
-		long Ping() {
-			if (!error) {
-				if (!waiting) {
-					if (sendto(s, message, MESSAGE_LEN, 0, (SOCKADDR*)&addr, sizeof(addr)) == SOCKET_ERROR) {
-						printf("[WinSock] sendto() failed with error code: %d", WSAGetLastError());
-						return ERROR_SENDTOFAILED;
-					}
-
-					startTime = GetTickCount();
-					waiting = true;
-				}
-
-				int res = SocketReceive(s);
-				if (res < 0) {
-					if(res != ERROR_PINGTIMEOUT) waiting = false;
-					return res;
-				}
-
-				waiting = false;
-				lastPing = GetTickCount() - startTime;
-				return lastPing;
-			}
-			else return error;
-		}
-
-		//TODO: error handling if neccessary
-		void Update(long time) {
-			if (!waiting) {
-				if (time - lastTime > PING_UPDATE_RATE) {
-					Ping();
-					lastTime = time;
-				}
-			}
-			else Ping();
-		}
-
-		long GetPing() {
-			return lastPing;
-		}
-
-		~PingAsync() {
-			closesocket(s);
-		}
-	};
+		return 0;
+	}
 }
