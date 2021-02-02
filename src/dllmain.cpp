@@ -5,6 +5,7 @@
 #include <curl/curl.h>
 #include <iostream>
 #include <json.hpp>
+#include <thread>
 #include "Host.hpp"
 #include "HostingOptions.hpp"
 #include "WebHandler.hpp"
@@ -19,6 +20,17 @@ using namespace Soku;
 
 bool firstTime = true;
 bool hosting = false;
+bool inMenu = false;
+
+void Update() {
+    while (true) {
+        if (inMenu == true)
+            Hostlist::Update();
+    }
+    this_thread::sleep_for(1ms);
+}
+
+thread *updateThread;
 
 SOKU_MODULE EntryPoint()
 {
@@ -34,6 +46,14 @@ SOKU_MODULE EntryPoint()
 
     Menu::Init();
     Hostlist::Init();
+
+    updateThread = new thread(Update);
+
+    if (DEBUG) {
+        AllocConsole();
+        SetConsoleTitleA("Hostlist Debug");
+        freopen("CONOUT$", "w", stdout);
+    }
 
     Menu::AddItem("Host", []() {
         if (hosting == true) {
@@ -107,6 +127,7 @@ SOKU_MODULE EntryPoint()
                 SokuAPI::InputBlock.Toggle(false);
                 SokuAPI::InputWorkaround.Toggle(true);
                 hosting = false;
+                inMenu = true;
                 
                 firstTime = false;
             }
@@ -116,8 +137,6 @@ SOKU_MODULE EntryPoint()
             CInputManagerCluster* input = SokuAPI::GetInputManager();
 
             if ((menu->Choice == 1 || menu->Choice == 2) && menu->Subchoice == 255) return;
-
-            Hostlist::Update();
 
             Menu::Render();
             Hostlist::Render();
@@ -150,11 +169,12 @@ SOKU_MODULE EntryPoint()
                 HostingOptions::enabled = false;
                 SokuAPI::InputBlock.Toggle(false);
                 SokuAPI::SfxPlay(SFX_BACK);
-                input->P1.B = 10;
+                input->P1.B = 10; 
             }
         }
         else {
             firstTime = true;
+            inMenu = false;
         }  
     }); 
 }

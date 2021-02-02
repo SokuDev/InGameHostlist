@@ -58,7 +58,7 @@ namespace PingMan {
 		int SockAddrInSetup(SOCKADDR_IN* addr, const char* ipstr, short port) {
 			unsigned long ip;
 			if ((ip = inet_addr(ipstr)) == INADDR_NONE) {
-				printf("[WinSock] Invalid ip string %s.", ipstr);
+				printf("[WinSock] Invalid ip string %s.\n", ipstr);
 				return ERROR_INVALIDIP;
 			}
 
@@ -80,9 +80,11 @@ namespace PingMan {
 			MessageSetup(message, &addr);
 
 			if (sendto(sock, message, MESSAGE_LEN, 0, (SOCKADDR*)&addr, sizeof(addr)) == SOCKET_ERROR) {
-				printf("[WinSock] sendto() failed with error code: %d", WSAGetLastError());
+				printf("[WinSock] sendto() failed with error code: %d.\n", WSAGetLastError());
 				return ERROR_SENDTOFAILED;
 			}
+
+			return 0;
 		}
 
 		int SocketReceive(SOCKET s, long *ip) {
@@ -90,7 +92,7 @@ namespace PingMan {
 			SOCKADDR_IN addr;
 			int addr_len = sizeof(addr);
 			if (recvfrom(sock, &response, sizeof(response), NULL, (SOCKADDR*)&addr, &addr_len) == SOCKET_ERROR) {
-				printf("[WinSock] recvfrom() failed with error code : %d", WSAGetLastError());
+				printf("[WinSock] recvfrom() failed with error code : %d.\n", WSAGetLastError());
 				return ERROR_RECVFROMFAILED;
 			}
 
@@ -104,14 +106,13 @@ namespace PingMan {
 	};
 
 	int Init() {
-		if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
-		{
-			printf("[WinSock] Winsock Init failed with error code: %d", WSAGetLastError());
+		if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+			printf("[WinSock] Winsock Init failed with error code: %d.\n", WSAGetLastError());
 			return ERROR_INITFAILED;
 		}
 
 		if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR) {
-			printf("[WinSock] socket() failed with error code: %d", WSAGetLastError());
+			printf("[WinSock] socket() failed with error code: %d.\n", WSAGetLastError());
 			return ERROR_SOCKETFAILED;
 		}
 		return 0;
@@ -126,12 +127,11 @@ namespace PingMan {
 		long newTime = GetTickCount();
 		PingInfo& ping = pings[ip];
 		if(ping.waiting == false && newTime - ping.oldTime > PING_UPDATE_RATE) { 
-			ping.waiting = true;
-			ping.oldTime = newTime;
-			
-			SocketSend(sock, ip, port);
+			if (SocketSend(sock, ip, port) == 0) {
+				ping.waiting = true;
+				ping.oldTime = newTime;
+			}
 		}
-		//All (successful) branches converge here
 		return ping.ping;
 	}
 
@@ -140,8 +140,8 @@ namespace PingMan {
 	}
 
 	int Update(long time) {
-		static fd_set fds;
-		static TIMEVAL tv;
+		fd_set fds;
+		TIMEVAL tv;
 
 		FD_ZERO(&fds);
 		FD_SET(sock, &fds);
@@ -149,17 +149,9 @@ namespace PingMan {
 		tv.tv_sec = 0;
 		tv.tv_usec = 0;
 
-		int packetCount; //Returns the amount of unprocessed packets?
-		if ((packetCount = select(sock, &fds, NULL, NULL, &tv)) == 0) {
-			return ERROR_PINGTIMEOUT;
-		}
-		else if (packetCount == SOCKET_ERROR) {
-			printf("[WinSock] select() failed with error code: %d\n", WSAGetLastError());
-			return ERROR_SELECTFAILED;
-		}
-
 		long ip;
-		while(packetCount--) {
+		int ret;
+		while ((ret = select(sock, &fds, NULL, NULL, &tv)) == 1) {
 			if (SocketReceive(sock, &ip) == 0) {
 				PingInfo& ping = pings[ip];
 				ping.waiting = false;
@@ -167,6 +159,14 @@ namespace PingMan {
 				ping.oldTime = time;
 			}
 		}
+		if (ret == 0) {
+			return ERROR_PINGTIMEOUT;
+		}
+		else if (ret == SOCKET_ERROR) {
+			printf("[WinSock] select() failed with error code: %d.\n", WSAGetLastError());
+			return ERROR_SELECTFAILED;
+		}
+
 		return 0;
 	}
 }

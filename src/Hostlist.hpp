@@ -47,13 +47,7 @@ namespace Hostlist
         backgroundImg = new Image();
         CreateImageFromFile(L"Modules/Soku-Hostlist/hostlistBG.png", backgroundImg);
 
-        //Not really sure where to put this, this works for now I guess
         Status::Init(); 
-
-        hosts[WAITING].push_back(new Host("Slen", "fite", "185.127.217.238", 10800));
-        hosts[WAITING].push_back(new Host("012345678901234567890", "Fite", "127.0.0.1", 10800));
-        hosts[WAITING].push_back(new Host("Unregistered", "Fight", "94.136.192.22", 10800));
-        hosts[WAITING].push_back(new Host("not Slenn", "Fight", "82.64.35.153", 10809));
     }
 
     void OnMenuOpen() {
