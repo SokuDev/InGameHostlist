@@ -7,6 +7,7 @@
 #define IN_MENU *(char *)(0x089a888 + 4)
 
 #define CMENU_OBJ (*(*((*(void ****)UNKNOWN_GLOBAL) + 1) + 2))
+#define CMENUCONNECT_VTABLE ((void*)0x00859300)
 //#define CMENUCONNECT_CNETWORKBASEOBJ ((void**)CMENU_OBJ+4)
 //#define CMENUCONNECT_CHOICE ((char*)CMENU_OBJ)[8]
 //#define CMENUCONNECT_SUBCHOICE ((char*)CMENU_OBJ)[9]
@@ -26,6 +27,8 @@
 //#define INPUT_CLICKED_YAXIS (((int*)CINPUTMANAGERCLUSTER_OBJ)[0xF])
 //#define INPUT_CLICKED_A (((int*)CINPUTMANAGERCLUSTER_OBJ)[0x10])
 //#define INPUT_CLICKED_B (((int*)CINPUTMANAGERCLUSTER_OBJ)[0x11])
+
+#define SCENE_ID ((byte*)0x008A0044)
 
 #define PROFILE1_DECKNAME ((VC9String *)0x0899840)
 #define PROFILE2_DECKNAME ((VC9String *)0x089985C)
@@ -127,7 +130,10 @@ namespace SokuAPI {
 	}
 
 	CMenuConnect *GetCMenuConnect() {
-		return (CMenuConnect *)CMENU_OBJ;
+		if (*SCENE_ID == 2 && IN_MENU && (void*)CMENU_OBJ == CMENUCONNECT_VTABLE)
+			return (CMenuConnect*)CMENU_OBJ;
+		else
+			return nullptr;
 	}
 
 	CDesignSprite *GetMsgBox() {

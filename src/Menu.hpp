@@ -1,6 +1,5 @@
 #pragma once
 #include "SokuAPI.hpp"
-#include <SokuLib.h>
 #include <string>
 #include <vector>
 using namespace std;
