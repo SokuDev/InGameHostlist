@@ -46,11 +46,11 @@ namespace HostingOptions {
 			ImGui::SameLine();
 			ImGui::InputInt("##port", &port, 0, 0);
 			ImGui::AlignTextToFramePadding();
-			ImGui::Text("Spectate");
+			ImGui::Text("Spectatable?");
 			ImGui::SameLine();
 			ImGui::Checkbox("##spec", &spectate);
 			ImGui::AlignTextToFramePadding();
-			ImGui::Text("Public");
+			ImGui::Text("Post to bot?");
 			ImGui::SameLine();
 			ImGui::Checkbox("##public", &publicHost);
 			ImGui::Text("Host message:");

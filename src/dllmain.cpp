@@ -1,6 +1,12 @@
 #pragma warning(disable : 4996)
 
 #define WIN32_LEAN_AND_MEAN
+#ifdef DEBUG_MODE
+#define DEBUG true
+#else
+#define DEBUG false
+#endif 
+
 #include <Windows.h>
 #include <winsock2.h>
 #include <Shlwapi.h>
@@ -8,6 +14,7 @@
 #include <iostream>
 #include <json.hpp>
 #include <thread>
+#include <imgui.h>
 
 #include "PingMan.hpp"
 
@@ -22,13 +29,12 @@
 
 #include "Hostlist.hpp"
 
+#include "ImGuiMan.hpp"
+
 using namespace std;
-using namespace Soku;
 
 std::wstring module_path;
 LARGE_INTEGER timer_frequency; 
-
-#define DEBUG false
 
 bool firstTime = true;
 bool hosting = false;
@@ -57,20 +63,21 @@ void HostLoop() {
 		host_payloads.pop_front();
 		host_mutex.unlock();
 		string response = WebHandler::Put("http://delthas.fr:14762/games", payload);
-		if (!response.empty()) {
+		if (response != "[]") {
 			Status::Error(response);
 		}
 	}
 }
 
-thread *updateThread;
-thread *hostThread;
+//For loading resources
+void Load() {
+	Hostlist::Load();
+	Menu::Load();
+}
 
-void (*Render)(void) = nullptr;
-
-void RenderHook() {
-	CMenuConnect *menu = SokuAPI::GetCMenuConnect();
-	if (menu != nullptr) {
+void Render() {
+	CMenuConnect* menu = SokuAPI::GetCMenuConnect();
+	if (menu != NULL) {
 		if (firstTime) {
 			Menu::OnMenuOpen();
 			Hostlist::OnMenuOpen();
@@ -83,8 +90,6 @@ void RenderHook() {
 
 			firstTime = false;
 		}
-
-		CMenuConnect* menu = SokuAPI::GetCMenuConnect();
 		CDesignSprite* msgbox = SokuAPI::GetMsgBox();
 		CInputManagerCluster* input = SokuAPI::GetInputManager();
 
@@ -117,21 +122,29 @@ void RenderHook() {
 		Menu::HandleInput();
 		Hostlist::HandleInput();
 
+		//This got surprisingly messy, basic logic is that if inputs are disabled 
+		//and you press B or both of the submenus are inactive it exits out, this is
+		//mostly meant so you can't end up in situations where the inputs are fully blocked
+		//With the extra hosting options check it's looking extra messy tho.
 		if (SokuAPI::InputBlock.Check() && (input->P1.B == 1 || (!HostingOptions::enabled && !Hostlist::active))) {
-			Hostlist::active = false;
-			HostingOptions::enabled = false;
-			SokuAPI::InputBlock.Toggle(false);
-			SokuAPI::SfxPlay(SFX_BACK);
-			input->P1.B = 10;
+			if (!HostingOptions::enabled) {
+				Hostlist::active = false;
+				HostingOptions::enabled = false;
+				SokuAPI::InputBlock.Toggle(false);
+				SokuAPI::SfxPlay(SFX_BACK);
+				input->P1.B = 10;
+			}
 		}
 	}
 	else {
 		firstTime = true;
 		inMenu = false;
 	}
-
-	Render();
 }
+
+thread *updateThread;
+thread *hostThread;
+thread *hookThread;
 
 BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
 	if (dwReason == DLL_PROCESS_ATTACH) {
@@ -237,7 +250,8 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
 			SokuAPI::ClearMenu();
 		});
 
-
+		hookThread = new thread(ImGuiMan::HookThread, Load, Render);
 	}
+
 	return TRUE;
 }

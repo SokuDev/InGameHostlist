@@ -1,7 +1,9 @@
 #pragma once
 #include "SokuAPI.hpp"
+#include "ImGuiMan.hpp"
 #include <string>
 #include <vector>
+#include <functional>
 using namespace std;
 
 extern std::wstring module_path;
@@ -9,7 +11,7 @@ extern std::wstring module_path;
 namespace Menu {
 	enum class Event { AlreadyPlaying, ConnectionFailed };
 
-	ImFont *menuFont;
+	ImFont *fontMenu;
 	vector<string> menuText;
 	// Uses std::function, which are a bit innefficient, but as long
 	// as it doesn't impact performance too much it's fine for now
@@ -19,13 +21,15 @@ namespace Menu {
 	CMenuConnect *menu;
 
 	void Init() {
+		SokuAPI::HideProfiles.Toggle(true);
+	}
+
+	void Load() {
 		wstring font_path = module_path;
 		font_path.append(L"\\romanan.ttf");
 		char font_path_ansi[MAX_PATH];
 		wcstombs(font_path_ansi, &font_path[0], MAX_PATH);
-		menuFont = ImGui::AddFontFromFile(font_path_ansi, 20.0f);
-
-		SokuAPI::HideProfiles.Toggle(true);
+		fontMenu = ImGui::GetIO().Fonts->AddFontFromFileTTF(font_path_ansi, 20.0f);
 	}
 
 	void OnMenuOpen() {
@@ -40,7 +44,7 @@ namespace Menu {
 		ImGui::Begin("##menu", 0,
 			ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus
 				| ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoSavedSettings);
-		ImGui::PushFont(menuFont);
+		ImGui::PushFont(fontMenu);
 		for (unsigned int i = 0; i < menuText.size(); ++i) {
 			ImGui::SetCursorPos(ImVec2(64 + 2, 125 + 32 * i + 2));
 			ImGui::TextColored((ImVec4)ImColor(0, 0, 0, 80), menuText[i].c_str());

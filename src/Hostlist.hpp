@@ -2,11 +2,9 @@
 #include "Host.hpp"
 #include "SokuAPI.hpp"
 #include "Status.hpp"
-#include <SokuLib.h>
 #include <string>
 #include <vector>
 using namespace std;
-using namespace Soku;
 
 #define SHORT_WAITTIME 3000
 #define LONG_WAITTIME 30000
@@ -24,7 +22,7 @@ namespace Hostlist {
 
 	bool joining = false;
 
-	Image *backgroundImg;
+	Image *imageBackground;
 	bool active = false;
 
 	int page_id = WAITING;
@@ -42,13 +40,14 @@ namespace Hostlist {
 	const ImColor colorError = ImColor(255, 0, 0, 255);
 
 	void Init() {
+		Status::Init();
+	}
+
+	void Load() {
 		std::wstring image_path = module_path;
 		image_path.append(L"\\hostlistBG.png");
 
-		backgroundImg = new Image();
-		CreateImageFromFile(image_path, backgroundImg);
-
-		Status::Init();
+		imageBackground = ImGuiMan::LoadImageFromFile(image_path);
 	}
 
 	void OnMenuOpen() {
@@ -125,18 +124,13 @@ namespace Hostlist {
 			ImGui::Begin("HostList##Hosts", 0,
 				ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove
 					| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNav
-					| ImGuiWindowFlags_NoNavFocus);
+					| ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoScrollbar);
 			ImGui::PushStyleColor(ImGuiCol_FrameBg, (ImVec4)ImColor(0, 0, 0, 0));
-			ImGui::PushStyleColor(ImGuiCol_Header, (ImVec4)ImColor(0, 200, 0, 200));
-			ImGui::PushStyleColor(ImGuiCol_HeaderHovered, (ImVec4)ImColor(0, 200, 0, 100));
-			ImGui::PushStyleColor(ImGuiCol_HeaderActive, (ImVec4)ImColor(0, 100, 0, 100));
-			ImGui::PushStyleColor(ImGuiCol_Separator, (ImVec4)ImColor(255, 255, 255, 150));
-
-			ImGui::SetCursorPos(ImVec2(5, 5));
-			ImGui::Image(backgroundImg->Texture(), ImVec2(300, 350));
-			ImGui::SetCursorPos(ImVec2(6, 5));
-
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 4.0f));
+
+			ImGui::SetCursorPos(ImVec2(3, 5));
+			ImGui::Image(imageBackground->Texture, ImVec2(300, 350));
+			ImGui::SetCursorPos(ImVec2(6, 5));
 
 			ImGui::PushItemWidth(-1);
 			ImGui::ListBoxHeader("##hosts_listbox", ImVec2(0, -20));
@@ -246,7 +240,7 @@ namespace Hostlist {
 
 			ImGui::ListBoxFooter();
 			ImGui::PopItemWidth();
-			ImGui::PopStyleColor(5);
+			ImGui::PopStyleColor();
 			ImGui::PopStyleVar();
 
 			ImGui::SetCursorPos(ImVec2(8, 335));
@@ -260,6 +254,7 @@ namespace Hostlist {
 		if (active) {
 			// Normal menu inputs
 			if (!joining) {
+				//Down
 				if (InputManager->P1.Yaxis == 1) {
 					ip_id += 1;
 					if (ip_id >= hosts[page_id].size())
@@ -267,10 +262,12 @@ namespace Hostlist {
 					InputManager->P1.Yaxis = 10;
 
 					SokuAPI::SfxPlay(SFX_MOVE);
+				//Up
 				} else if (InputManager->P1.Yaxis == -1) {
-					ip_id -= 1;
-					if (ip_id < 0)
+					if (ip_id == 0)
 						ip_id = hosts[page_id].size() - 1;
+					else
+						ip_id -= 1;
 					InputManager->P1.Yaxis = -10;
 
 					SokuAPI::SfxPlay(SFX_MOVE);

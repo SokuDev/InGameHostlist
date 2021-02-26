@@ -75,19 +75,19 @@ struct CMenuConnect {
 	byte NotSpectateFlag;
 	byte Spectate;
 	byte UNKNOWN_3[2];
-	uint MenuItem_Count;
+	int MenuItem_Count;
 	byte UNKNOWN_4[8];
-	uint CursorPos;
-	uint CursorPos2;
+	int CursorPos;
+	int CursorPos2;
 	byte UNKNOWN_5[48];
-	uint NumberInput_ArrowPos;
+	int NumberInput_ArrowPos;
 	byte UNKNOWN_6[36];
-	uint Port;
+	int Port;
 	byte UNKNOWN_7[4];
 	char IPString[20]; // Final/Used val
 	char IPWString; // Unknown size
 	byte UNKNOWN_8[2051];
-	uint NotInSubMenuFlag;
+	int NotInSubMenuFlag;
 	byte UNKNOWN_9[332];
 	byte InSubMenuFlag;
 	byte UNKNOWN_10[171];
@@ -130,10 +130,11 @@ namespace SokuAPI {
 	}
 
 	CMenuConnect *GetCMenuConnect() {
-		if (*SCENE_ID == 2 && IN_MENU && (void*)CMENU_OBJ == CMENUCONNECT_VTABLE)
-			return (CMenuConnect*)CMENU_OBJ;
-		else
-			return nullptr;
+		if (*SCENE_ID == 2)
+			if(IN_MENU)
+				if(*(void**)CMENU_OBJ == CMENUCONNECT_VTABLE)
+					return (CMenuConnect*)CMENU_OBJ;
+		return NULL;
 	}
 
 	CDesignSprite *GetMsgBox() {
@@ -146,7 +147,7 @@ namespace SokuAPI {
 
 	string GetProfileName(int id) {
 		if (id < 1 || id > 2) {
-			return NULL;
+			return "";
 		}
 		string deckname = string(id == 1 ? *PROFILE1_DECKNAME : *PROFILE2_DECKNAME);
 		int dotpos = deckname.find_last_of('.');
@@ -160,7 +161,7 @@ namespace SokuAPI {
 		}
 	}
 
-	void SetupHost(uint port, bool spectate) {
+	void SetupHost(int port, bool spectate) {
 		typedef void(__thiscall * func)(void *);
 		func HostFun = (func)0x0446a40;
 
@@ -174,7 +175,7 @@ namespace SokuAPI {
 		GetMsgBox()->active = false;
 	}
 
-	void JoinHost(const char *ip, uint port, bool spectate = false) {
+	void JoinHost(const char *ip, int port, bool spectate = false) {
 		typedef void(__thiscall * func)(void *);
 		func JoinFun = (func)0x0446b20;
 

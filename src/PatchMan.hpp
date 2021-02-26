@@ -22,6 +22,20 @@ namespace PatchMan {
 		return old;
 	}
 
+	inline DWORD HookVTable(DWORD* addr, DWORD target) {
+		DWORD oldProtect;
+		if (!VirtualProtect(addr, 4, PAGE_READWRITE, &oldProtect))
+			return 0;
+
+		DWORD old = *addr;
+		*addr = target;
+
+		if (!VirtualProtect(addr, 4, oldProtect, &oldProtect))
+			return 0;
+
+		return old;
+	}
+
 	class Patch {
 	private:
 		void *address;
