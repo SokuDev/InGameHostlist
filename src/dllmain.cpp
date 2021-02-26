@@ -153,13 +153,16 @@ thread *updateThread;
 thread *hostThread;
 thread *hookThread;
 
-BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
-	if (dwReason == DLL_PROCESS_ATTACH) {
+extern "C" __declspec(dllexport) bool CheckVersion(const BYTE hash[16]) {
+       return true;
+}
+
+extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
 		//Init path variables
 		wchar_t wd[MAX_PATH];
 		GetCurrentDirectoryW(MAX_PATH, wd);
 		wchar_t path[MAX_PATH];
-		GetModuleFileNameW(hinst, path, MAX_PATH);
+		GetModuleFileNameW(hMyModule, path, MAX_PATH);
 		PathRemoveFileSpecW(path);
 		wchar_t relative[MAX_PATH];
 		if (PathRelativePathToW(relative, wd, FILE_ATTRIBUTE_DIRECTORY, path, FILE_ATTRIBUTE_DIRECTORY)) {
@@ -269,7 +272,10 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
 		});
 
 		hookThread = new thread(ImGuiMan::HookThread, Load, Render);
-	}
 
+	return TRUE;
+}
+
+BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
 	return TRUE;
 }
