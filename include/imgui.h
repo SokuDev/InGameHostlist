@@ -1463,6 +1463,10 @@ struct ImGuiIO
     float       NavInputsDownDurationPrev[ImGuiNavInput_COUNT];
     ImVector<ImWchar> InputQueueCharacters;     // Queue of _characters_ input (obtained by platform back-end). Fill using AddInputCharacter() helper.
 
+    //IMGUIMAN stuff
+    bool RemapNavFlag;
+    void (*RemapNavFun)(void);
+
     IMGUI_API   ImGuiIO();
 };
 

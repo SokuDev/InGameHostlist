@@ -37,9 +37,18 @@ namespace HostingOptions {
 
 	void Render() {
 		if (enabled) {
-			ImGui::SetNextWindowSize(ImVec2(150, 190));
+			ImGui::SetNextWindowSize(ImVec2(150, 175));
 			ImGui::SetNextWindowPos(ImVec2(231, 158));
-			ImGui::Begin("Hosting Options##HostingOptions", &enabled, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings);
+			ImGui::Begin("Hosting Options##HostingOptions", &enabled, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse);
+			
+			if (ImGui::IsWindowAppearing()) {
+				ImGui::GetIO().NavVisible = true;
+			}
+
+			//if (!ImGui::GetIO().NavVisible) {
+			//	enabled = false;
+			//}
+
 			ImGui::SetCursorPosY(30);
 			ImGui::AlignTextToFramePadding();
 			ImGui::Text("Port");

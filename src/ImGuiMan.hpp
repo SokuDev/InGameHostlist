@@ -1,8 +1,13 @@
 #pragma once
+
+#ifndef _IMGUIMAN
+#define _IMGUIMAN
+
 #include <Windows.h>
 #include <iostream>
 #include <WinUser.h>
 #include <string>
+#include <thread>
 
 #include <d3d9.h>
 #include <d3dx9tex.h>
@@ -12,6 +17,7 @@
 #include <imgui_impl_win32.h>
 
 #include "PatchMan.hpp"
+#include "SokuAPI.hpp"
 
 #ifndef DEBUG
 #define DEBUG false
@@ -50,9 +56,15 @@ namespace ImGuiMan {
 	HWND window;
 
 	ImFont* fontDefault = NULL;
-	ImFont* fontMenu = NULL;
 
-	Image* backgroundImg = NULL;
+	bool RemapNavFlag = true;
+
+	Image* LoadImageFromTexture(PDIRECT3DTEXTURE9 texture) {
+		// Retrieve description of the texture surface so we can access its size
+		D3DSURFACE_DESC image_desc;
+		texture->GetLevelDesc(0, &image_desc);
+		return new Image(texture, image_desc.Width, image_desc.Height);
+	}
 
 	Image *LoadImageFromFile(wstring filename) {
 		// Load texture from disk
@@ -61,10 +73,7 @@ namespace ImGuiMan {
 		if (hr != S_OK)
 			return NULL;
 
-		// Retrieve description of the texture surface so we can access its size
-		D3DSURFACE_DESC image_desc;
-		texture->GetLevelDesc(0, &image_desc);
-		return new Image(texture, image_desc.Width, image_desc.Height);
+		return LoadImageFromTexture(texture);
 	}
 
 	void SetupStyle() {
@@ -79,14 +88,15 @@ namespace ImGuiMan {
 		style.ScrollbarRounding = 0;
 		style.TabRounding = 0;
 
-		style.ItemSpacing = ImVec2(5, 5);
+		style.ItemSpacing = ImVec2(4, 4);
 		style.ItemInnerSpacing = ImVec2(4, 4);
-		style.FramePadding = ImVec2(5, 5);
+		style.FramePadding = ImVec2(4, 4);
 
-		style.WindowPadding = ImVec2(8, 0);
-		style.ScrollbarSize = 0;
+		style.WindowPadding = ImVec2(4, 4);
+		style.ScrollbarSize = 10;
 
 		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.3, 0.3, 0.3, 0.9);
+		style.Colors[ImGuiCol_PopupBg] = ImVec4(0.3, 0.3, 0.3, 0.9);
 		style.Colors[ImGuiCol_Border] = ImVec4(1, 1, 1, 0.9);
 
 		style.Colors[ImGuiCol_TitleBg] = ImVec4(0.3, 0.3, 0.3, 0.9);
@@ -118,69 +128,18 @@ namespace ImGuiMan {
 		style.Colors[ImGuiCol_NavHighlight] = (ImVec4)ImColor(0, 200, 0, 200);
 	}
 
-	HRESULT __stdcall Hooked_EndScene(IDirect3DDevice9* pDevice) {
-		static bool init = true;
-		if (init)
-		{
-			init = false;
-			ImGui::CreateContext();
-			ImGuiIO& io = ImGui::GetIO();
-
-			io.WantCaptureKeyboard = true;
-			io.WantCaptureMouse = true;
-			io.WantTextInput = true;
-			
-			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-			io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-
-			ImGui_ImplWin32_Init(window);
-			ImGui_ImplDX9_Init(pDevice);
-
-			//Loading fonts/images has to be done here I think
-			//Todo make a InitFunction you can pass to this.
-			//Font loading
-			fontDefault = io.Fonts->AddFontDefault();
-
-			if (LoadFunction != NULL)
-				LoadFunction();
-			
-			wstring font_path = module_path;
-			font_path.append(L"\\romanan.ttf");
-			char font_path_ansi[MAX_PATH];
-			wcstombs(font_path_ansi, &font_path[0], MAX_PATH);
-			fontMenu = io.Fonts->AddFontFromFileTTF(font_path_ansi, 20.0f);
-
-			std::wstring image_path = module_path;
-			image_path.append(L"\\hostlistBG.png");
-			backgroundImg = ImGuiMan::LoadImageFromFile(image_path);
-
-			SetupStyle();
-
-			if(DEBUG) printf("Imgui init done.");
-		}
-
-		ImGui_ImplDX9_NewFrame();
-		ImGui_ImplWin32_NewFrame();
-		ImGui::NewFrame();
-
-		if(RenderFunction != nullptr)
-			RenderFunction();
-
-		/*
-		ImGui::Begin("##test", (bool*)0, ImVec2(200, 200));
-		ImGui::Text("Text");
-		int a = 0;
-		ImGui::InputInt("a", &a);
-		ImGui::InputInt("b", &a);
-		ImGui::End();
-		*/
-
-		ImGui::EndFrame();
-		ImGui::Render();
-
-		ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
-
-		return oldEndScene(pDevice);
+	void RemapNav() {
+		ImGuiIO& io = ImGui::GetIO();
+		CInputManagerCluster* SokuInput = SokuAPI::GetInputManager();
+		if (SokuInput->P1.Yaxis > 0) io.NavInputs[ImGuiNavInput_DpadDown] = 1.0f;
+		if (SokuInput->P1.Yaxis < 0) io.NavInputs[ImGuiNavInput_DpadUp] = 1.0f;
+		if (SokuInput->P1.Xaxis > 0) io.NavInputs[ImGuiNavInput_DpadRight] = 1.0f;
+		if (SokuInput->P1.Xaxis < 0) io.NavInputs[ImGuiNavInput_DpadLeft] = 1.0f;
+		if (SokuInput->P1.A) io.NavInputs[ImGuiNavInput_Activate] = 1.0f;
+		if (SokuInput->P1.B) io.NavInputs[ImGuiNavInput_Cancel] = 1.0f;
+		if (SokuInput->P1.C) io.NavInputs[ImGuiNavInput_Menu] = 1.0f;
+		if (io.KeysDown[io.KeyMap[ImGuiKey_Enter]]) io.NavInputs[ImGuiNavInput_Input] = 1.0f;
+		if (io.KeysDown[io.KeyMap[ImGuiKey_Tab]]) io.NavInputs[ImGuiNavInput_KeyTab_] = 1.0f;
 	}
 
 	LRESULT __stdcall WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -202,30 +161,73 @@ namespace ImGuiMan {
 		if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam)) {
 			return true;
 		}
-			
+
 		return CallWindowProc(oldWndProc, hWnd, uMsg, wParam, lParam);
 	}
 
+	HRESULT __stdcall Hooked_EndScene(IDirect3DDevice9* pDevice) {
+		static bool init = true;
+		if (init)
+		{
+			init = false;
+			ImGui::CreateContext();
+			ImGuiIO& io = ImGui::GetIO();
+
+			io.WantCaptureKeyboard = true;
+			io.WantCaptureMouse = true;
+			io.WantTextInput = true;
+			
+			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+			io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+
+			io.RemapNavFlag = RemapNavFlag;
+			io.RemapNavFun = RemapNav;
+
+			ImGui_ImplWin32_Init(window);
+			ImGui_ImplDX9_Init(pDevice);
+
+			oldWndProc = (WNDPROC)SetWindowLongPtr(window, GWL_WNDPROC, (LONG_PTR)WndProc);
+
+			fontDefault = io.Fonts->AddFontDefault();
+
+			if (LoadFunction != NULL)
+				LoadFunction();
+
+			SetupStyle();
+
+			if(DEBUG) printf("Imgui init done.");
+		}
+
+		ImGui_ImplDX9_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+
+		if(RenderFunction != nullptr)
+			RenderFunction();
+
+		ImGui::EndFrame();
+		ImGui::Render();
+
+		ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+
+		return oldEndScene(pDevice);
+	}
 
 	DWORD WINAPI HookThread(PassedFun load, PassedFun render) {
 		while (*SOKU_D3D_DEVICE == 0 || *SOKU_HWND == 0)
 			this_thread::sleep_for(10ms);
-		
+
+		LoadFunction = load;
+		RenderFunction = render;
+
 		window = *SOKU_HWND;
-		std::cout << std::to_string((int)window) << std::endl;
-
-		//std::cout << std::to_string((int)window) << std::endl;
-
-		oldWndProc = (WNDPROC)SetWindowLongPtr(window, GWL_WNDPROC, (LONG_PTR)WndProc);
-
 		IDirect3DDevice9* Device = *SOKU_D3D_DEVICE;
 		void** pVTable = *((void***)Device);
 
 		oldEndScene = (f_EndScene)PatchMan::HookVTable((DWORD*)&(pVTable[42]), (DWORD)Hooked_EndScene);
 
-		LoadFunction = load;
-		RenderFunction = render;
-
 		return false;
 	}
 }
+
+#endif

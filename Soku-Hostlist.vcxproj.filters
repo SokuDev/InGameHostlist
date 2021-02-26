@@ -68,5 +68,8 @@
     <ClInclude Include="src\ImGuiMan.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\DialogMan.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

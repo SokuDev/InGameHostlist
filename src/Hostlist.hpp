@@ -121,12 +121,14 @@ namespace Hostlist {
 		if (SokuAPI::GetCMenuConnect()->Choice != 6) {
 			ImGui::SetNextWindowPos(ImVec2(300, 85));
 			ImGui::SetNextWindowSize(ImVec2(310, 356));
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 0));
+			ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 0);
 			ImGui::Begin("HostList##Hosts", 0,
 				ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove
 					| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNav
 					| ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoScrollbar);
 			ImGui::PushStyleColor(ImGuiCol_FrameBg, (ImVec4)ImColor(0, 0, 0, 0));
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 4.0f));
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(3.0f, 3.0f));
 
 			ImGui::SetCursorPos(ImVec2(3, 5));
 			ImGui::Image(imageBackground->Texture, ImVec2(300, 350));
@@ -247,6 +249,7 @@ namespace Hostlist {
 			Status::Render();
 
 			ImGui::End();
+			ImGui::PopStyleVar(2);
 		}
 	}
 

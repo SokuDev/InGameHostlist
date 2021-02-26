@@ -27,6 +27,7 @@
     <ClCompile Include="src\dllmain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\DialogMan.hpp" />
     <ClInclude Include="src\Host.hpp" />
     <ClInclude Include="src\HostingOptions.hpp" />
     <ClInclude Include="src\Hostlist.hpp" />

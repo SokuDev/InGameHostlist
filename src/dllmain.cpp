@@ -31,6 +31,8 @@
 
 #include "ImGuiMan.hpp"
 
+#include "DialogMan.hpp"
+
 using namespace std;
 
 std::wstring module_path;
@@ -99,6 +101,7 @@ void Render() {
 		Menu::Render();
 		Hostlist::Render();
 		HostingOptions::Render();
+		DialogMan::Render();
 
 		// Debug window
 		if (DEBUG) {
@@ -126,7 +129,11 @@ void Render() {
 		//and you press B or both of the submenus are inactive it exits out, this is
 		//mostly meant so you can't end up in situations where the inputs are fully blocked
 		//With the extra hosting options check it's looking extra messy tho.
-		if (SokuAPI::InputBlock.Check() && (input->P1.B == 1 || (!HostingOptions::enabled && !Hostlist::active))) {
+		bool dialogsActive = DialogMan::AnyActive();
+		if(dialogsActive)
+			SokuAPI::InputBlock.Toggle(true);
+
+		if (SokuAPI::InputBlock.Check() && (input->P1.B == 1 || (!HostingOptions::enabled && !Hostlist::active && !dialogsActive))) {
 			if (!HostingOptions::enabled) {
 				Hostlist::active = false;
 				HostingOptions::enabled = false;
@@ -231,9 +238,20 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
 			SokuAPI::ClearMenu();
 		});
 
+		DialogMan::AddDialog("Clip", "Do you want to join or spectate this host?", "Join", "Spectate", [](DialogOption option) {
+			printf("Triggered");
+			if (option == DIALOG_OPTION1) {
+				SokuAPI::JoinHost(NULL, 0);
+			}
+			else {
+				SokuAPI::JoinHost(NULL, 0, true);
+			}
+		});
+
 		Menu::AddItem("Join from clipboard", []() {
 			Status::Normal("Joining...", Status::forever);
-			SokuAPI::JoinHost(NULL, 0);
+			DialogMan::OpenDialog("Clip");
+			SokuAPI::ClearMenu();
 		});
 
 		Menu::AddItem("Profile select");
