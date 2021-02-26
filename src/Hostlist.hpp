@@ -11,6 +11,8 @@ using namespace std;
 
 #define PING_DELAY 3000
 
+#define HOSTS_PER_PAGE 15
+
 extern std::wstring module_path;
 extern LARGE_INTEGER timer_frequency;
 
@@ -119,10 +121,13 @@ namespace Hostlist {
 
 	void Render() {
 		if (SokuAPI::GetCMenuConnect()->Choice != 6) {
-			ImGui::SetNextWindowPos(ImVec2(300, 85));
-			ImGui::SetNextWindowSize(ImVec2(310, 356));
+			float statusSize = (Status::lines - 1) * 16;
+			if (Status::lines == 0) statusSize = 0;
+
+			ImGui::SetNextWindowPos(ImVec2(250, 85));
+			ImGui::SetNextWindowSize(ImVec2(360, 336 + statusSize));
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 0));
-			ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 0);
+			ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 1);
 			ImGui::Begin("HostList##Hosts", 0,
 				ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove
 					| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNav
@@ -131,16 +136,16 @@ namespace Hostlist {
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(3.0f, 3.0f));
 
 			ImGui::SetCursorPos(ImVec2(3, 5));
-			ImGui::Image(imageBackground->Texture, ImVec2(300, 350));
+			ImGui::Image(imageBackground->Texture, ImVec2(350, 330 + statusSize));
 			ImGui::SetCursorPos(ImVec2(6, 5));
 
 			ImGui::PushItemWidth(-1);
 			ImGui::ListBoxHeader("##hosts_listbox", ImVec2(0, -20));
-			ImGui::SetCursorPosX(117);
+			ImGui::SetCursorPosX(152); 
 			ImGui::Text("Hostlist");
 			ImGui::Separator();
 
-			ImGui::SetCursorPosX(60);
+			ImGui::SetCursorPosX(95); 
 			ImGui::TextColored((page_id == WAITING) ? colorNormal : colorGrayedOut, "Waiting(%d)", hosts[WAITING].size());
 			ImGui::SameLine();
 			ImGui::Text(" / ");
@@ -150,7 +155,7 @@ namespace Hostlist {
 			if (page_id == WAITING) {
 				ImGui::Columns(3, "waiting");
 				ImGui::SetColumnWidth(0, 100);
-				ImGui::SetColumnWidth(1, 153);
+				ImGui::SetColumnWidth(1, 203);
 				ImGui::SetColumnWidth(2, 32);
 				ImGui::Separator();
 				ImGui::Text("Name");
@@ -163,8 +168,8 @@ namespace Hostlist {
 				if (hosts[WAITING].size() > 0) {
 					ImGui::Separator(); // Necessary to avoid graphical glitches
 
-					unsigned int start_pos = ip_id - (ip_id % 15);
-					for (unsigned int i = start_pos; i < start_pos + 15; i++) {
+					unsigned int start_pos = ip_id - (ip_id % HOSTS_PER_PAGE);
+					for (unsigned int i = start_pos; i < start_pos + HOSTS_PER_PAGE; i++) {
 						if (i < hosts[WAITING].size()) {
 							ImGui::PushID(i);
 
@@ -189,8 +194,8 @@ namespace Hostlist {
 			// Pretty much a duplicate, I should find a way to streamline it
 			else if (page_id == PLAYING) {
 				ImGui::Columns(3, "playing");
-				ImGui::SetColumnWidth(0, 125);
-				ImGui::SetColumnWidth(1, 128);
+				ImGui::SetColumnWidth(0, 150);
+				ImGui::SetColumnWidth(1, 153);
 				ImGui::SetColumnWidth(2, 32);
 				ImGui::Separator();
 				ImGui::Text("Player 1");
@@ -203,8 +208,8 @@ namespace Hostlist {
 				if (hosts[PLAYING].size() > 0) {
 					ImGui::Separator(); // Necessary to avoid graphical glitches
 
-					unsigned int start_pos = ip_id - (ip_id % 15);
-					for (unsigned int i = start_pos; i < start_pos + 15; i++) {
+					unsigned int start_pos = ip_id - (ip_id % HOSTS_PER_PAGE);
+					for (unsigned int i = start_pos; i < start_pos + HOSTS_PER_PAGE; i++) {
 						if (i < hosts[PLAYING].size()) {
 							ImGui::PushID(i);
 
@@ -231,11 +236,11 @@ namespace Hostlist {
 				ImGui::Columns(1);
 				ImGui::Separator();
 
-				ImGui::Text("There are currently no waiting hosts.");
+				ImGui::Text("There are currently no hosts.");
 			}
 			// Move the cursor to the end of the listbox
 			// so that the column borders extend all the way down
-			ImGui::SetCursorPosY(326);
+			ImGui::SetCursorPosY(305);
 
 			ImGui::Columns(1);
 			ImGui::Separator();
@@ -245,7 +250,7 @@ namespace Hostlist {
 			ImGui::PopStyleColor();
 			ImGui::PopStyleVar();
 
-			ImGui::SetCursorPos(ImVec2(8, 335));
+			ImGui::SetCursorPos(ImVec2(8, 315));
 			Status::Render();
 
 			ImGui::End();
@@ -254,6 +259,16 @@ namespace Hostlist {
 	}
 
 	void HandleInput() {
+		if (!SokuAPI::InputBlock.Check() || active) {
+			if (InputManager->P1.Xaxis == 1 || InputManager->P1.Xaxis == -1) {
+				page_id = !page_id;
+				ip_id = 0;
+				InputManager->P1.Xaxis *= 10;
+
+				SokuAPI::SfxPlay(SFX_MOVE);
+			}
+		}
+
 		if (active) {
 			// Normal menu inputs
 			if (!joining) {
@@ -272,14 +287,6 @@ namespace Hostlist {
 					else
 						ip_id -= 1;
 					InputManager->P1.Yaxis = -10;
-
-					SokuAPI::SfxPlay(SFX_MOVE);
-				}
-
-				if (InputManager->P1.Xaxis == 1 || InputManager->P1.Xaxis == -1) {
-					page_id = !page_id;
-					ip_id = 0;
-					InputManager->P1.Xaxis *= 10;
 
 					SokuAPI::SfxPlay(SFX_MOVE);
 				}

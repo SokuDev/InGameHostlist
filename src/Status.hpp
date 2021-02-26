@@ -4,6 +4,8 @@ using namespace std;
 
 extern LARGE_INTEGER timer_frequency;
 
+#define CHARS_PER_LINE 48
+
 // Responsible for handling Status message on the hostlist.
 namespace Status {
 	enum Type { Type_Normal, Type_Error, Type_Count };
@@ -17,10 +19,13 @@ namespace Status {
 	string message;
 	unsigned long long timePosted;
 	unsigned long long lifetime;
+	int lines;
 
 	void Init() {
 		Colors[Type_Normal] = (ImVec4)ImColor(255, 255, 255, 255);
 		Colors[Type_Error] = (ImVec4)ImColor(255, 0, 0, 255);
+
+		lines = 0;
 	}
 
 	void OnMenuOpen() {
@@ -32,6 +37,7 @@ namespace Status {
 		type = t;
 		message = msg;
 		lifetime = life;
+		lines = (msg.length() / CHARS_PER_LINE) + 1;
 
 		LARGE_INTEGER counter;
 		QueryPerformanceCounter(&counter);
@@ -50,11 +56,15 @@ namespace Status {
 	void Update(unsigned long long time) {
 		if (time - timePosted > lifetime) {
 			message = "";
+			lines = 0;
 			lifetime = forever;
 		}
 	}
 
 	void Render() {
-		ImGui::TextColored(Colors[type], message.c_str());
+		for (int i = 0; i < lines; i++) {
+			string line = message.substr(i * CHARS_PER_LINE, CHARS_PER_LINE) + '\n';
+			ImGui::TextColored(Colors[type], line.c_str());
+		}
 	}
 } 
