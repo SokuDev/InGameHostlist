@@ -65,7 +65,7 @@ void HostLoop() {
 		host_payloads.pop_front();
 		host_mutex.unlock();
 		string response = WebHandler::Put("http://delthas.fr:14762/games", payload);
-		if (response != "[]") {
+		if (!response.empty()) {
 			Status::Error(response);
 		}
 	}

@@ -56,7 +56,7 @@ namespace WebHandler {
 	string Request(const string &url) {
 		string response;
 		int response_code;
-		request_chunk.memory = (char *)malloc(1);
+		request_chunk.memory = (char *)calloc(1, sizeof(char));
 		request_chunk.size = 0;
 
 		curl_easy_setopt(request_handle, CURLOPT_URL, &url[0]);
@@ -74,7 +74,7 @@ namespace WebHandler {
 			throw response_code;
 		}
 
-		response = request_chunk.memory;
+		response = string(request_chunk.memory, request_chunk.memory + request_chunk.size);
 
 		free(request_chunk.memory);
 		return response;
@@ -82,7 +82,7 @@ namespace WebHandler {
 
 	string Put(const string &url, const string &data) {
 		string response;
-		put_chunk.memory = (char *)malloc(1);
+		put_chunk.memory = (char *)calloc(1, sizeof(char));
 		put_chunk.size = 0;
 
 		curl_easy_setopt(put_handle, CURLOPT_URL, &url[0]);
@@ -94,7 +94,8 @@ namespace WebHandler {
 			return string("connection error: " + to_string(res));
 		}
 
-		response = put_chunk.memory;
+		response = string(put_chunk.memory, put_chunk.memory + put_chunk.size);
+		
 		free(put_chunk.memory);
 		return response;
 	}
