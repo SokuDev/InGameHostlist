@@ -9,6 +9,7 @@
 
 #include <Windows.h>
 #include <winsock2.h>
+#include <process.h>
 #include <Shlwapi.h>
 #include <curl/curl.h>
 #include <iostream>
@@ -153,126 +154,129 @@ thread *updateThread;
 thread *hostThread;
 thread *hookThread;
 
+void init_thread(void *unused) {
+	QueryPerformanceFrequency(&timer_frequency);
+	
+	SokuAPI::Init();
+	
+	WebHandler::Init();
+	atexit(WebHandler::Cleanup);
+	
+	PingMan::Init();
+	atexit(PingMan::Cleanup);
+	
+	HostingOptions::LoadConfig();
+	
+	Menu::Init();
+	Hostlist::Init();
+	
+	updateThread = new thread(Update);
+	hostThread = new thread(HostLoop);
+	
+	if (DEBUG) {
+		AllocConsole();
+		SetConsoleTitleA("InGameHostlist Debug");
+		freopen("CONOUT$", "w", stdout);
+	}
+	
+	Menu::AddItem("Host", []() {
+		if (hosting == true) {
+			Status::Normal("Host aborted.");
+			SokuAPI::ClearMenu();
+		}
+		else {
+			Status::Normal("Hosting...", Status::forever);
+			SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
+			
+			if (HostingOptions::publicHost) {
+				JSON data = {
+					"profile_name",
+					SokuAPI::GetProfileName(1),
+					"message",
+					HostingOptions::message,
+					"port",
+					HostingOptions::port,
+				};
+				host_mutex.lock();
+				host_payloads.emplace_back(data.dump());
+				host_mutex.unlock();
+			}
+		}
+		hosting = !hosting;
+	});
+	
+	Menu::AddItem("Join", []() {
+		Hostlist::active = true;
+		// Prevents the hostlist from instantly registering the input
+		// Very ugly, but eh...
+		SokuAPI::GetInputManager()->P1.A = 10;
+		SokuAPI::InputBlock.Toggle(true);
+		SokuAPI::ClearMenu();
+	});
+	
+	Menu::AddItem("Refresh", []() {
+		Hostlist::oldTime = 0;
+		SokuAPI::ClearMenu();
+	});
+	
+	Menu::AddItem("Options", []() {
+		HostingOptions::enabled = !HostingOptions::enabled;
+		SokuAPI::InputBlock.Toggle(true);
+		SokuAPI::ClearMenu();
+	});
+	
+	DialogMan::AddDialog("Clip", "Do you want to join or spectate this host?", "Join", "Spectate", [](DialogOption option) {
+		printf("Triggered");
+		if (option == DIALOG_OPTION1) {
+			SokuAPI::JoinHost(NULL, 0);
+		}
+		else {
+			SokuAPI::JoinHost(NULL, 0, true);
+		}
+	});
+	
+	Menu::AddItem("Join from clipboard", []() {
+		Status::Normal("Joining...", Status::forever);
+		DialogMan::OpenDialog("Clip");
+		SokuAPI::ClearMenu();
+	});
+	
+	Menu::AddItem("Profile select");
+	
+	Menu::AddEventHandler(Menu::Event::AlreadyPlaying, [&]() {
+		Status::Normal("Match in progress, spectating...");
+		SokuAPI::JoinHost(NULL, 0, true);
+	});
+	
+	Menu::AddEventHandler(Menu::Event::ConnectionFailed, [&]() {
+		Hostlist::joining = false;
+		Status::Error("Failed to connect.");
+		SokuAPI::SfxPlay(SFX_BACK);
+		SokuAPI::ClearMenu();
+	});
+	
+	hookThread = new thread(ImGuiMan::HookThread, Load, Render);
+}
+
 extern "C" __declspec(dllexport) bool CheckVersion(const BYTE hash[16]) {
        return true;
 }
 
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
-		//Init path variables
-		wchar_t wd[MAX_PATH];
-		GetCurrentDirectoryW(MAX_PATH, wd);
-		wchar_t path[MAX_PATH];
-		GetModuleFileNameW(hMyModule, path, MAX_PATH);
-		PathRemoveFileSpecW(path);
-		wchar_t relative[MAX_PATH];
-		if (PathRelativePathToW(relative, wd, FILE_ATTRIBUTE_DIRECTORY, path, FILE_ATTRIBUTE_DIRECTORY)) {
-			module_path = wstring(relative);
-		} else {
-			module_path = wstring(path);
-		}
-
-		QueryPerformanceFrequency(&timer_frequency);
-
-		SokuAPI::Init();
-
-		WebHandler::Init();
-		atexit(WebHandler::Cleanup);
-
-		PingMan::Init();
-		atexit(PingMan::Cleanup);
-
-		HostingOptions::LoadConfig();
-
-		Menu::Init();
-		Hostlist::Init();
-
-		updateThread = new thread(Update);
-		hostThread = new thread(HostLoop);
-
-		if (DEBUG) {
-			AllocConsole();
-			SetConsoleTitleA("InGameHostlist Debug");
-			freopen("CONOUT$", "w", stdout);
-		}
-
-		Menu::AddItem("Host", []() {
-			if (hosting == true) {
-				Status::Normal("Host aborted.");
-				SokuAPI::ClearMenu();
-			}
-			else {
-				Status::Normal("Hosting...", Status::forever);
-				SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
-
-				if (HostingOptions::publicHost) {
-					JSON data = {
-						"profile_name",
-						SokuAPI::GetProfileName(1),
-						"message",
-						HostingOptions::message,
-						"port",
-						HostingOptions::port,
-					};
-					host_mutex.lock();
-					host_payloads.emplace_back(data.dump());
-					host_mutex.unlock();
-				}
-			}
-			hosting = !hosting;
-		});
-
-		Menu::AddItem("Join", []() {
-			Hostlist::active = true;
-			// Prevents the hostlist from instantly registering the input
-			// Very ugly, but eh...
-			SokuAPI::GetInputManager()->P1.A = 10;
-			SokuAPI::InputBlock.Toggle(true);
-			SokuAPI::ClearMenu();
-		});
-
-		Menu::AddItem("Refresh", []() {
-			Hostlist::oldTime = 0;
-			SokuAPI::ClearMenu();
-		});
-
-		Menu::AddItem("Options", []() {
-			HostingOptions::enabled = !HostingOptions::enabled;
-			SokuAPI::InputBlock.Toggle(true);
-			SokuAPI::ClearMenu();
-		});
-
-		DialogMan::AddDialog("Clip", "Do you want to join or spectate this host?", "Join", "Spectate", [](DialogOption option) {
-			printf("Triggered");
-			if (option == DIALOG_OPTION1) {
-				SokuAPI::JoinHost(NULL, 0);
-			}
-			else {
-				SokuAPI::JoinHost(NULL, 0, true);
-			}
-		});
-
-		Menu::AddItem("Join from clipboard", []() {
-			Status::Normal("Joining...", Status::forever);
-			DialogMan::OpenDialog("Clip");
-			SokuAPI::ClearMenu();
-		});
-
-		Menu::AddItem("Profile select");
-
-		Menu::AddEventHandler(Menu::Event::AlreadyPlaying, [&]() {
-			Status::Normal("Match in progress, spectating...");
-			SokuAPI::JoinHost(NULL, 0, true);
-		});
-
-		Menu::AddEventHandler(Menu::Event::ConnectionFailed, [&]() {
-			Hostlist::joining = false;
-			Status::Error("Failed to connect.");
-			SokuAPI::SfxPlay(SFX_BACK);
-			SokuAPI::ClearMenu();
-		});
-
-		hookThread = new thread(ImGuiMan::HookThread, Load, Render);
-
+	//Init path variables
+	wchar_t wd[MAX_PATH];
+	GetCurrentDirectoryW(MAX_PATH, wd);
+	wchar_t path[MAX_PATH];
+	GetModuleFileNameW(hMyModule, path, MAX_PATH);
+	PathRemoveFileSpecW(path);
+	wchar_t relative[MAX_PATH];
+	if (PathRelativePathToW(relative, wd, FILE_ATTRIBUTE_DIRECTORY, path, FILE_ATTRIBUTE_DIRECTORY)) {
+		module_path = wstring(relative);
+	} else {
+		module_path = wstring(path);
+	}
+	
+	_beginthread(init_thread, 0, NULL);
 	return TRUE;
 }
 
