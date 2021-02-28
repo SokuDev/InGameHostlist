@@ -96,14 +96,6 @@ void Render() {
 		CDesignSprite* msgbox = SokuAPI::GetMsgBox();
 		CInputManagerCluster* input = SokuAPI::GetInputManager();
 
-		if ((menu->Choice == 1 || menu->Choice == 2) && menu->Subchoice == 255)
-			return;
-
-		Menu::Render();
-		Hostlist::Render();
-		HostingOptions::Render();
-		DialogMan::Render();
-
 		// Debug window
 		if (DEBUG) {
 			ImGui::Begin("DebugInfo", 0);
@@ -122,6 +114,14 @@ void Render() {
 			ImGui::Text("   Refresh Count: %d", Hostlist::refreshCount);
 			ImGui::End();
 		}
+
+		if ((menu->Choice == 1 || menu->Choice == 2) && menu->Subchoice == 255)
+			return;
+
+		Menu::Render();
+		Hostlist::Render();
+		HostingOptions::Render();
+		DialogMan::Render();
 
 		Menu::HandleInput();
 		Hostlist::HandleInput();

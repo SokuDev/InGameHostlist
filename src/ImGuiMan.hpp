@@ -40,18 +40,18 @@ struct Image {
 };
 
 namespace ImGuiMan {
-	typedef HRESULT(__stdcall* f_EndScene)(IDirect3DDevice9* pDevice); // Our function prototype 
-	f_EndScene oldEndScene; // Original Endscene
-
+	typedef HRESULT(__stdcall* EndSceneFn)(IDirect3DDevice9* pDevice); 
 
 	typedef LRESULT(CALLBACK* WNDPROC)(HWND, UINT, WPARAM, LPARAM);
 	WNDPROC oldWndProc;
 
-	typedef void (*PassedFun)(void);
+	void** oldVTable = NULL;
+
+	typedef void (*PassedFn)(void);
 	//For loading images/fonts.
-	PassedFun LoadFunction = NULL;
+	PassedFn LoadFunction = NULL;
 	//For rendering with imgui/dx.
-	PassedFun RenderFunction = NULL;
+	PassedFn RenderFunction = NULL;
 
 	HWND window;
 
@@ -210,10 +210,19 @@ namespace ImGuiMan {
 
 		ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 
-		return oldEndScene(pDevice);
+		return ((EndSceneFn)oldVTable[42])(pDevice);
 	}
 
-	DWORD WINAPI HookThread(PassedFun load, PassedFun render) {
+	//Necessary since Dx9 has functions that refresh the vtable...
+	void **CreateDummyVTable(void** oldVTable) {
+		void** newVTable = (void**)malloc(175 * sizeof(void*));
+		memcpy(newVTable, oldVTable, 175 * sizeof(void*));
+		
+		newVTable[42] = (void*)Hooked_EndScene;
+		return newVTable;
+	}
+
+	DWORD WINAPI HookThread(PassedFn load, PassedFn render) {
 		while (*SOKU_D3D_DEVICE == 0 || *SOKU_HWND == 0)
 			this_thread::sleep_for(10ms);
 
@@ -221,12 +230,11 @@ namespace ImGuiMan {
 		RenderFunction = render;
 
 		window = *SOKU_HWND;
-		IDirect3DDevice9* Device = *SOKU_D3D_DEVICE;
-		void** pVTable = *((void***)Device);
+		void*** Device = *(void****)SOKU_D3D_DEVICE;
+		oldVTable = *(void***)Device;
+		(((void**)Device)[0]) = CreateDummyVTable(oldVTable);
 
-		oldEndScene = (f_EndScene)PatchMan::HookVTable((DWORD*)&(pVTable[42]), (DWORD)Hooked_EndScene);
-
-		return false;
+		return 0;
 	}
 }
 
