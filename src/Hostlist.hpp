@@ -41,6 +41,8 @@ namespace Hostlist {
 	const ImColor colorGrayedOut = ImColor(180, 180, 180, 255);
 	const ImColor colorError = ImColor(255, 0, 0, 255);
 
+	mutex updatingHostlist;
+
 	void Init() {
 		Status::Init();
 	}
@@ -74,6 +76,7 @@ namespace Hostlist {
 				try {
 					string s = WebHandler::Request("http://delthas.fr:14762/games");
 					JSON res = JSON::Load(s);
+					lock_guard<mutex> lock(updatingHostlist);
 
 					for (unsigned int page = 0; page < PAGE_COUNT; ++page) {
 						for (unsigned int i = 0; i < hosts[page].size(); ++i) {
@@ -144,6 +147,8 @@ namespace Hostlist {
 			ImGui::SetCursorPosX(152); 
 			ImGui::Text("Hostlist");
 			ImGui::Separator();
+
+			updatingHostlist.lock();
 
 			ImGui::SetCursorPosX(95); 
 			ImGui::TextColored((page_id == WAITING) ? colorNormal : colorGrayedOut, "Waiting(%d)", hosts[WAITING].size());
@@ -238,6 +243,9 @@ namespace Hostlist {
 
 				ImGui::Text("There are currently no hosts.");
 			}
+
+			updatingHostlist.unlock();
+
 			// Move the cursor to the end of the listbox
 			// so that the column borders extend all the way down
 			ImGui::SetCursorPosY(305);
