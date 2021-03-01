@@ -41,11 +41,13 @@ struct Image {
 
 namespace ImGuiMan {
 	typedef HRESULT(__stdcall* EndSceneFn)(IDirect3DDevice9* pDevice); 
+	typedef HRESULT(__stdcall* ResetFn)(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* params);
 
 	typedef LRESULT(CALLBACK* WNDPROC)(HWND, UINT, WPARAM, LPARAM);
 	WNDPROC oldWndProc;
 
 	void** oldVTable = NULL;
+	void** newVTable = NULL;
 
 	typedef void (*PassedFn)(void);
 	//For loading images/fonts.
@@ -157,6 +159,15 @@ namespace ImGuiMan {
 			io.MousePos.x = correct_x;
 			io.MousePos.y = correct_y;
 		}
+		else if (uMsg == WM_SIZE) {
+			void*** Device = *(void****)SOKU_D3D_DEVICE;
+			if (wParam == SIZE_MINIMIZED) {
+				(((void**)Device)[0]) = oldVTable;
+			}
+			else if (wParam == SIZE_RESTORED) {
+				(((void**)Device)[0]) = newVTable;
+			}
+		}
 
 		if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam)) {
 			return true;
@@ -167,6 +178,7 @@ namespace ImGuiMan {
 
 	HRESULT __stdcall Hooked_EndScene(IDirect3DDevice9* pDevice) {
 		static bool init = true;
+
 		if (init)
 		{
 			init = false;
@@ -213,12 +225,25 @@ namespace ImGuiMan {
 		return ((EndSceneFn)oldVTable[42])(pDevice);
 	}
 
+	HRESULT __stdcall Hooked_Reset(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* params) {
+		ImGui_ImplDX9_InvalidateDeviceObjects();
+
+		HRESULT hr = ((ResetFn)oldVTable[16])(pDevice, params);
+		if (hr != S_OK)
+			return NULL;
+
+		ImGui_ImplDX9_CreateDeviceObjects();
+
+		return S_OK;
+	}
+
 	//Necessary since Dx9 has functions that refresh the vtable...
 	void **CreateDummyVTable(void** oldVTable) {
 		void** newVTable = (void**)malloc(175 * sizeof(void*));
 		memcpy(newVTable, oldVTable, 175 * sizeof(void*));
 		
 		newVTable[42] = (void*)Hooked_EndScene;
+		newVTable[16] = (void*)Hooked_Reset;
 		return newVTable;
 	}
 
@@ -232,7 +257,8 @@ namespace ImGuiMan {
 		window = *SOKU_HWND;
 		void*** Device = *(void****)SOKU_D3D_DEVICE;
 		oldVTable = *(void***)Device;
-		(((void**)Device)[0]) = CreateDummyVTable(oldVTable);
+		newVTable = CreateDummyVTable(oldVTable);
+		(((void**)Device)[0]) = newVTable;
 
 		return 0;
 	}
