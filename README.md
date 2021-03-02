@@ -15,6 +15,6 @@ A module that adds hostlist bot integration directly into Hisoutensoku.
 3. Done.
 
 ## Usage instructions
-You can set your port/host message/options along whether you want to post your host to the bot in the Options menu.
-Pressing left/right anywhere will let you switch the hostlist tabs.
-Pressing Join will get you in the hostlist, after that selecting a host and pressing A will join or spectate that host, depending on which tab you're in.
+* You can set your port/host message/options along whether you want to post your host to the bot in the Options menu.
+* Pressing left/right anywhere will let you switch the hostlist tabs.
+* Pressing Join will get you in the hostlist, after that selecting a host and pressing A will join or spectate that host, depending on which tab you're in.
