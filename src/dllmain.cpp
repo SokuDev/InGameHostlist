@@ -226,7 +226,6 @@ void init_thread(void *unused) {
 	});
 	
 	DialogMan::AddDialog("Clip", "Do you want to join or spectate this host?", "Join", "Spectate", [](DialogOption option) {
-		printf("Triggered");
 		if (option == DIALOG_OPTION1) {
 			SokuAPI::JoinHost(NULL, 0);
 		}

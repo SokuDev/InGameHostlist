@@ -61,6 +61,9 @@ namespace ImGuiMan {
 
 	bool RemapNavFlag = true;
 
+	bool active = true;
+	bool windowed = true;
+
 	Image* LoadImageFromTexture(PDIRECT3DTEXTURE9 texture) {
 		// Retrieve description of the texture surface so we can access its size
 		D3DSURFACE_DESC image_desc;
@@ -161,13 +164,19 @@ namespace ImGuiMan {
 		}
 		else if (uMsg == WM_SIZE) {
 			void*** Device = *(void****)SOKU_D3D_DEVICE;
-			if (wParam == SIZE_MINIMIZED) {
-				(((void**)Device)[0]) = oldVTable;
-			}
-			else if (wParam == SIZE_RESTORED) {
-				(((void**)Device)[0]) = newVTable;
-			}
+			if (wParam == SIZE_MINIMIZED)
+				active = false;
+			else if (wParam == SIZE_RESTORED)
+				active = true;
 		}
+		else if (uMsg == WM_ACTIVATEAPP && !windowed) {
+			void*** Device = *(void****)SOKU_D3D_DEVICE;
+			if(!wParam)
+				active = false;
+			else
+				active = true;
+		}
+	
 
 		if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam)) {
 			return true;
@@ -178,6 +187,9 @@ namespace ImGuiMan {
 
 	HRESULT __stdcall Hooked_EndScene(IDirect3DDevice9* pDevice) {
 		static bool init = true;
+
+		//if (GetForegroundWindow() != *SOKU_HWND) return ((EndSceneFn)oldVTable[42])(pDevice);
+		if(!active) return ((EndSceneFn)oldVTable[42])(pDevice);
 
 		if (init)
 		{
@@ -233,6 +245,8 @@ namespace ImGuiMan {
 			return NULL;
 
 		ImGui_ImplDX9_CreateDeviceObjects();
+
+		windowed = params->Windowed;
 
 		return S_OK;
 	}
