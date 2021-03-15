@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <imgui.h>
+#include "ImGuiMan.hpp"
 using namespace std;
 
 enum DialogOption {
@@ -12,41 +13,18 @@ enum DialogOption {
 };
 
 namespace DialogMan {
+	typedef void(*DialogFunction)();
+
 	struct Dialog {
 		string Title;
-		string Message;
-		string Option1;
-		string Option2;
-		function<void(DialogOption)> Callback;
+		ImGuiWindowFlags Flags;
+		DialogFunction Callback;
 
-		Dialog(string title, string message, string option1, string option2, function<void(DialogOption)> callback) :
-			Title(title), Message(message), Option1(option1), Option2(option2), Callback(callback) {}
+		Dialog(string title, DialogFunction callback) :
+			Title(title), Flags(0), Callback(callback) {}
 
-		void Render() {
-			ImGui::SetNextWindowPosCenter();
-			ImGui::SetNextWindowSize(ImVec2(300, 60));
-			if (ImGui::BeginPopup(Title.c_str(), ImGuiWindowFlags_NoCollapse)) {
-				if (ImGui::IsWindowAppearing()) {
-					ImGui::GetIO().NavVisible = true;
-					ImGui::GetIO().NavActive = true;
-				}
-
-				ImGui::AlignTextToFramePadding();
-				ImGui::Text(Message.c_str());
-
-				ImGui::SetCursorPosX(100);
-				if (ImGui::Button(Option1.c_str())) {
-					ImGui::CloseCurrentPopup();
-					Callback(DIALOG_OPTION1);
-				}
-				ImGui::SameLine();
-				if (ImGui::Button(Option2.c_str())) {
-					ImGui::CloseCurrentPopup();
-					Callback(DIALOG_OPTION2);
-				}
-				ImGui::EndPopup();
-			}
-		}
+		Dialog(string title, ImGuiWindowFlags flags, DialogFunction callback) :
+			Title(title), Flags(flags), Callback(callback) {}
 	};
 
 	vector<Dialog> dialogs;
@@ -55,18 +33,40 @@ namespace DialogMan {
 		ImGui::OpenPopup(id.c_str());
 	}
 
-	void AddDialog(string title, string message, string option1, string option2, function<void(DialogOption)> callback) {
-		dialogs.emplace_back(title, message, option1, option2, callback);
+	void AddDialog(string title, DialogFunction callback) {
+		dialogs.emplace_back(title, callback);
+	}
+
+	void AddDialog(string title, ImGuiWindowFlags flags, DialogFunction callback) {
+		dialogs.emplace_back(title, flags, callback);
 	}
 
 	void Render() {
-		for (Dialog& d : dialogs)
-			d.Render();
+		for (Dialog& d : dialogs) {
+			ImGuiMan::SetNextWindowPosCenter();
+			if (ImGui::BeginPopup(d.Title.c_str(), ImGuiWindowFlags_NoCollapse | d.Flags)) {
+				if (ImGui::IsWindowAppearing()) {
+					ImGui::GetIO().NavVisible = true;
+					ImGui::GetIO().NavActive = true;
+				}
+
+				d.Callback();
+				
+				ImGui::EndPopup();
+			}
+		}
 	}
 
 	bool AnyActive() {
 		for (Dialog& d : dialogs)
 			if (ImGui::IsPopupOpen(d.Title.c_str()))
+				return true;
+		return false;
+	}
+
+	bool ModalActive() {
+		for (Dialog& d : dialogs)
+			if (ImGui::IsPopupOpen(d.Title.c_str()) && d.Flags & ImGuiWindowFlags_Modal)
 				return true;
 		return false;
 	}

@@ -9,14 +9,13 @@ using namespace std;
 extern std::wstring module_path;
 
 namespace Menu {
+	typedef void(*CallbackFunction)(void);
 	enum class Event { AlreadyPlaying, ConnectionFailed };
 
 	ImFont *fontMenu;
 	vector<string> menuText;
-	// Uses std::function, which are a bit innefficient, but as long
-	// as it doesn't impact performance too much it's fine for now
-	vector<function<void(void)>> menuCallbacks;
-	vector<function<void(void)>> eventCallbacks(2);
+	vector<CallbackFunction> menuCallbacks;
+	vector<CallbackFunction> eventCallbacks(2);
 
 	CMenuConnect *menu;
 
@@ -63,7 +62,7 @@ namespace Menu {
 		return true;
 	}
 
-	bool AddItem(string text, function<void(void)> func) {
+	bool AddItem(string text, CallbackFunction func) {
 		if (!AddItem(text))
 			return false;
 
@@ -71,7 +70,7 @@ namespace Menu {
 		return true;
 	}
 
-	void AddEventHandler(Event e, function<void(void)> func) {
+	void AddEventHandler(Event e, CallbackFunction func) {
 		eventCallbacks[int(e)] = func;
 	}
 

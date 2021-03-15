@@ -62,14 +62,16 @@ namespace Status {
 	}
 
 	void Render() {
-		for (int i = 0; i < lines; i++) {
-			string line;
-			if (i == lines - 1)
-				line = message.substr(i * CHARS_PER_LINE) + '\n';
-			else
-				line = message.substr(i * CHARS_PER_LINE, CHARS_PER_LINE) + '\n';
+		if (!message.empty()) {
+			for (int i = 0; i < lines; i++) {
+				string line;
+				if (i == lines - 1)
+					line = message.substr(i * CHARS_PER_LINE) + '\n';
+				else
+					line = message.substr(i * CHARS_PER_LINE, CHARS_PER_LINE) + '\n';
 
-			ImGui::TextColored(Colors[type], line.c_str());
+				ImGui::TextColored(Colors[type], line.c_str());
+			}
 		}
 	}
 } 

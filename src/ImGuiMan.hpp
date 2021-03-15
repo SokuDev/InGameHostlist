@@ -81,6 +81,11 @@ namespace ImGuiMan {
 		return LoadImageFromTexture(texture);
 	}
 
+	// Use instead of the ImGui one, for compatability with the resize mod.
+	inline void SetNextWindowPosCenter(ImGuiCond c = 0) {
+		ImGui::SetNextWindowPos(ImVec2(WINDOW_WIDTH * 0.5f, WINDOW_HEIGHT * 0.5f), c, ImVec2(0.5f, 0.5f));
+	}
+
 	void SetupStyle() {
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.Alpha = 1;

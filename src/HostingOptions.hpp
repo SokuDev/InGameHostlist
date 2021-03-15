@@ -1,10 +1,9 @@
 #pragma once
 #include <fstream>
 #include <iostream>
-#include <json.hpp>
 #include <sstream>
+#include "ImGuiMan.hpp"
 using namespace std;
-using namespace json;
 
 extern std::wstring module_path;
 
@@ -38,7 +37,7 @@ namespace HostingOptions {
 	void Render() {
 		if (enabled) {
 			ImGui::SetNextWindowSize(ImVec2(150, 175));
-			ImGui::SetNextWindowPos(ImVec2(231, 158));
+			ImGuiMan::SetNextWindowPosCenter();
 			ImGui::Begin("Hosting Options##HostingOptions", &enabled, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse);
 			
 			if (ImGui::IsWindowAppearing()) {

@@ -37,7 +37,10 @@
 using namespace std;
 
 std::wstring module_path;
-LARGE_INTEGER timer_frequency; 
+LARGE_INTEGER timer_frequency;
+
+bool warnedForName = false;
+bool firstRun = false;
 
 bool firstTime = true;
 bool hosting = false;
@@ -92,6 +95,10 @@ void Render() {
 			inMenu = true;
 
 			firstTime = false;
+
+			if (firstRun) {
+				DialogMan::OpenDialog("Introduction");
+			}
 		}
 		CDesignSprite* msgbox = SokuAPI::GetMsgBox();
 		CInputManagerCluster* input = SokuAPI::GetInputManager();
@@ -135,7 +142,7 @@ void Render() {
 			SokuAPI::InputBlock.Toggle(true);
 
 		if (SokuAPI::InputBlock.Check() && (input->P1.B == 1 || (!HostingOptions::enabled && !Hostlist::active && !dialogsActive))) {
-			if (!HostingOptions::enabled) {
+			if (!HostingOptions::enabled && !DialogMan::ModalActive()) {
 				Hostlist::active = false;
 				HostingOptions::enabled = false;
 				SokuAPI::InputBlock.Toggle(false);
@@ -154,7 +161,7 @@ thread *updateThread;
 thread *hostThread;
 thread *hookThread;
 
-void init_thread(void *unused) {
+void Init(void *unused) {
 	QueryPerformanceFrequency(&timer_frequency);
 	
 	SokuAPI::Init();
@@ -178,6 +185,24 @@ void init_thread(void *unused) {
 		SetConsoleTitleA("InGameHostlist Debug");
 		freopen("CONOUT$", "w", stdout);
 	}
+
+	DialogMan::AddDialog("Introduction", []() {
+		ImGui::Text(
+			"Welcome to InGame-Hostlist,\n"
+			"A mod that lets you use a hostlist from inside the game.\n\n"
+			"Usage instructions:\n"
+			"Before hosting/joining please go into the options menu,\n"
+			"to set your port and spectate options, as the game will\n"
+			"no longer propmpt you for them before each host.\n"
+			"You will also find settings for your host message and\n"
+			"whether you want your games to appear on the hostlist or not.\n\n"
+			"After that you can enter the hostlist via the 'Join' button,\n"
+			"or just host by pressing 'Host'.\n"
+			"Note: For ease of viewing you can switch between the Playing\n"
+			"and Waiting tabs from anywhere in the menu.\n\n"
+			"Also please remember to change your profile name before playing\n"
+			"online, have fun!");
+	});
 	
 	Menu::AddItem("Host", []() {
 		if (hosting == true) {
@@ -185,6 +210,14 @@ void init_thread(void *unused) {
 			SokuAPI::ClearMenu();
 		}
 		else {
+			if (!warnedForName && SokuAPI::GetProfileName(1) == "edit me") {
+				Status::Error("Consider changing your profile name before hosting, or press host again.");
+				SokuAPI::ClearMenu();
+
+				warnedForName = true;
+				return;
+			}
+
 			Status::Normal("Hosting...", Status::forever);
 			SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
 			
@@ -224,30 +257,41 @@ void init_thread(void *unused) {
 		SokuAPI::InputBlock.Toggle(true);
 		SokuAPI::ClearMenu();
 	});
-	
-	DialogMan::AddDialog("Clip", "Do you want to join or spectate this host?", "Join", "Spectate", [](DialogOption option) {
-		if (option == DIALOG_OPTION1) {
+
+	DialogMan::AddDialog("Clipboard", []() {
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Do you want to join or spectate this host?");
+
+		ImGui::SetCursorPosX(100);
+		if (ImGui::Button("Join")) {
+			ImGui::CloseCurrentPopup(); 
 			SokuAPI::JoinHost(NULL, 0);
+			SokuAPI::InputBlock.Toggle(false);
+			SokuAPI::SfxPlay(SFX_SELECT);
 		}
-		else {
+		ImGui::SameLine();
+		if (ImGui::Button("Spectate")) {
+			ImGui::CloseCurrentPopup();
 			SokuAPI::JoinHost(NULL, 0, true);
+			SokuAPI::InputBlock.Toggle(false);
+			SokuAPI::SfxPlay(SFX_SELECT);
 		}
 	});
 	
 	Menu::AddItem("Join from clipboard", []() {
 		Status::Normal("Joining...", Status::forever);
-		DialogMan::OpenDialog("Clip");
+		DialogMan::OpenDialog("Clipboard");
 		SokuAPI::ClearMenu();
 	});
 	
 	Menu::AddItem("Profile select");
 	
-	Menu::AddEventHandler(Menu::Event::AlreadyPlaying, [&]() {
+	Menu::AddEventHandler(Menu::Event::AlreadyPlaying, []() {
 		Status::Normal("Match in progress, spectating...");
 		SokuAPI::JoinHost(NULL, 0, true);
 	});
 	
-	Menu::AddEventHandler(Menu::Event::ConnectionFailed, [&]() {
+	Menu::AddEventHandler(Menu::Event::ConnectionFailed, []() {
 		Hostlist::joining = false;
 		Status::Error("Failed to connect.");
 		SokuAPI::SfxPlay(SFX_BACK);
@@ -274,8 +318,23 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	} else {
 		module_path = wstring(path);
 	}
+
+	DWORD dataSize = 1;
+	DWORD data = 0;
+	if (ERROR_SUCCESS == RegGetValueA(HKEY_CURRENT_USER, "Software", "SokuIGHostlistFirstRun", RRF_RT_REG_BINARY, NULL, &data, &dataSize)) {
+		firstRun = data;
+	}
+	else {
+		firstRun = true;
+		HKEY hKey;
+		BYTE value = 0;
+		if (RegOpenKeyEx(HKEY_CURRENT_USER, L"Software", 0, KEY_WRITE, &hKey) == ERROR_SUCCESS) {
+			RegSetValueEx(hKey, L"SokuIGHostlistFirstRun", 0, REG_BINARY, &value, 1);
+			RegCloseKey(hKey);
+		}
+	}
 	
-	_beginthread(init_thread, 0, NULL);
+	_beginthread(Init, 0, NULL);
 	return TRUE;
 }
 
