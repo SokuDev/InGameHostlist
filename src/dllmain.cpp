@@ -46,6 +46,8 @@ bool firstTime = true;
 bool hosting = false;
 bool inMenu = false;
 
+int debounceFrames = 0;
+
 mutex host_mutex;
 deque<string> host_payloads;
 
@@ -97,6 +99,7 @@ void Render() {
 			firstTime = false;
 
 			if (firstRun) {
+				firstRun = false;
 				DialogMan::OpenDialog("Introduction");
 			}
 		}
@@ -201,7 +204,14 @@ void Init(void *unused) {
 			"Note: For ease of viewing you can switch between the Playing\n"
 			"and Waiting tabs from anywhere in the menu.\n\n"
 			"Also please remember to change your profile name before playing\n"
-			"online, have fun!");
+			"online, have fun!\n\n"
+			"Press A/B to continue.\n");
+
+		if (debounceFrames++ > 60 && ImGui::GetIO().NavInputs[ImGuiNavInput_Activate]) {
+			SokuAPI::InputBlock.Toggle(false);
+			SokuAPI::SfxPlay(SFX_SELECT);
+			ImGui::CloseCurrentPopup();
+		}
 	});
 	
 	Menu::AddItem("Host", []() {
@@ -319,19 +329,18 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 		module_path = wstring(path);
 	}
 
-	DWORD dataSize = 1;
-	DWORD data = 0;
-	if (ERROR_SUCCESS == RegGetValueW(HKEY_CURRENT_USER, L"Software", L"SokuIGHostlistFirstRun", RRF_RT_REG_BINARY, NULL, &data, &dataSize)) {
-		firstRun = data;
-	}
-	else {
-		firstRun = true;
-		HKEY hKey;
-		BYTE value = 0;
-		if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software", 0, KEY_WRITE, &hKey) == ERROR_SUCCESS) {
-			RegSetValueExW(hKey, L"SokuIGHostlistFirstRun", 0, REG_BINARY, &value, 1);
-			RegCloseKey(hKey);
+	HKEY key;
+	if (!RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\Touhou\\Soku", 0, NULL, 0, KEY_READ | KEY_WRITE | KEY_WOW64_64KEY, NULL, &key, NULL)) {
+		DWORD value;
+		DWORD size = sizeof(value);
+		if (!RegQueryValueExW(key, L"HostlistShownPrompt", NULL, NULL, (byte*)&value, &size)) {
+			firstRun = !value;
+		} else {
+			value = 1;
+			RegSetKeyValueW(key, NULL, L"HostlistShownPrompt", REG_DWORD, &value, sizeof(value));
+			firstRun = true;
 		}
+		RegCloseKey(key);
 	}
 	
 	_beginthread(Init, 0, NULL);
