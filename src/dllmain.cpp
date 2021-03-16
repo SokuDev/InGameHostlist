@@ -321,15 +321,15 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 
 	DWORD dataSize = 1;
 	DWORD data = 0;
-	if (ERROR_SUCCESS == RegGetValueA(HKEY_CURRENT_USER, "Software", "SokuIGHostlistFirstRun", RRF_RT_REG_BINARY, NULL, &data, &dataSize)) {
+	if (ERROR_SUCCESS == RegGetValueW(HKEY_CURRENT_USER, L"Software", L"SokuIGHostlistFirstRun", RRF_RT_REG_BINARY, NULL, &data, &dataSize)) {
 		firstRun = data;
 	}
 	else {
 		firstRun = true;
 		HKEY hKey;
 		BYTE value = 0;
-		if (RegOpenKeyEx(HKEY_CURRENT_USER, L"Software", 0, KEY_WRITE, &hKey) == ERROR_SUCCESS) {
-			RegSetValueEx(hKey, L"SokuIGHostlistFirstRun", 0, REG_BINARY, &value, 1);
+		if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software", 0, KEY_WRITE, &hKey) == ERROR_SUCCESS) {
+			RegSetValueExW(hKey, L"SokuIGHostlistFirstRun", 0, REG_BINARY, &value, 1);
 			RegCloseKey(hKey);
 		}
 	}
