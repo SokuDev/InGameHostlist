@@ -42,6 +42,7 @@ namespace PatchMan {
 		byte *patch;
 		byte *originalData;
 		size_t size;
+		bool state;
 
 		byte *CopyData(const void *src, size_t size) {
 			byte *p = new byte[size];
@@ -56,6 +57,7 @@ namespace PatchMan {
 			size = patchStr.size();
 			patch = CopyData(patchStr.c_str(), size);
 			originalData = CopyData(address, size);
+			state = false;
 		}
 
 		Patch(DWORD addr, const char *patchStr, size_t sizeStr) {
@@ -63,6 +65,7 @@ namespace PatchMan {
 			address = (void *)addr;
 			patch = CopyData(patchStr, size);
 			originalData = CopyData(address, size);
+			state = false;
 		}
 
 		Patch(DWORD addr, byte patchByte, size_t count) {
@@ -71,6 +74,7 @@ namespace PatchMan {
 			patch = new byte[count];
 			memset(patch, patchByte, size);
 			originalData = CopyData(address, size);
+			state = false;
 		}
 
 		~Patch() {
@@ -78,17 +82,26 @@ namespace PatchMan {
 			delete originalData;
 		}
 
-		bool Toggle(bool active) {
+		bool Toggle(bool new_state) {
 			DWORD oldProtect;
-			if (VirtualProtect(address, size, PAGE_READWRITE, &oldProtect)) {
-				memcpy(address, (active ? patch : originalData), size);
-				return VirtualProtect(address, size, oldProtect, &oldProtect);
-			} else
-				return false;
+			if (state != new_state) {
+				if (VirtualProtect(address, size, PAGE_READWRITE, &oldProtect)) {
+					memcpy(address, (new_state ? patch : originalData), size);
+					state = new_state;
+					return VirtualProtect(address, size, oldProtect, &oldProtect);
+				}
+				else
+					return false;
+			}
+			else
+				return true;
 		}
 
-		bool Check() {
-			return memcmp(address, patch, size) == 0;
+		bool Check(bool deep_check) {
+			if (deep_check)
+				return memcmp(address, patch, size) == 0;
+			else
+				return state;
 		}
 	};
 
@@ -113,16 +126,16 @@ namespace PatchMan {
 			return *this;
 		}
 
-		bool Check() {
+		bool Check(bool deep_check = false) {
 			for (Patch &patch : patches)
-				if (!patch.Check())
+				if (!patch.Check(deep_check))
 					return false;
 			return true;
 		}
 
-		bool Toggle(bool active) {
+		bool Toggle(bool state) {
 			for (Patch &patch : patches)
-				if (!patch.Toggle(active))
+				if (!patch.Toggle(state))
 					return false;
 			return true;
 		}

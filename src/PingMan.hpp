@@ -1,12 +1,11 @@
 #pragma once
 #include <windows.h>
 #include <winsock2.h>
-#include "Host.hpp"
-#include "Status.hpp"
 #include <mutex>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unordered_map>
+#include "Host.hpp"
 
 #define PING_UPDATE_RATE 2200L
 #define MESSAGE_LEN 37

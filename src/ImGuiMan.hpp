@@ -40,8 +40,9 @@ struct Image {
 };
 
 namespace ImGuiMan {
-	typedef HRESULT(__stdcall* EndSceneFn)(IDirect3DDevice9* pDevice); 
-	typedef HRESULT(__stdcall* ResetFn)(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* params);
+	typedef HRESULT(__stdcall* EndSceneFn)(IDirect3DDevice9*); 
+	typedef HRESULT(__stdcall* ResetFn)(IDirect3DDevice9*, D3DPRESENT_PARAMETERS*);
+	typedef bool(__thiscall* SokuSetupFn)(void**, HWND*);
 
 	typedef LRESULT(CALLBACK* WNDPROC)(HWND, UINT, WPARAM, LPARAM);
 	WNDPROC oldWndProc;
@@ -63,6 +64,8 @@ namespace ImGuiMan {
 
 	bool active = true;
 	bool windowed = true;
+
+	SokuSetupFn Original_SokuSetup = NULL;
 
 	Image* LoadImageFromTexture(PDIRECT3DTEXTURE9 texture) {
 		// Retrieve description of the texture surface so we can access its size
@@ -153,6 +156,8 @@ namespace ImGuiMan {
 	}
 
 	LRESULT __stdcall WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+		ImGuiIO& io = ImGui::GetIO();
+
 		if (uMsg == WM_MOUSEMOVE) {
 			RECT rect;
 			GetWindowRect(window, &rect);
@@ -163,7 +168,6 @@ namespace ImGuiMan {
 			float correct_x = (resized_x * (WINDOW_WIDTH / resized_width));
 			float correct_y = (resized_y * (WINDOW_HEIGHT / resized_height));
 
-			ImGuiIO& io = ImGui::GetIO();
 			io.MousePos.x = correct_x;
 			io.MousePos.y = correct_y;
 		}
@@ -181,19 +185,18 @@ namespace ImGuiMan {
 			else
 				active = true;
 		}
-	
 
-		if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam)) {
-			return true;
-		}
+		LRESULT res = CallWindowProc(oldWndProc, hWnd, uMsg, wParam, lParam);
 
-		return CallWindowProc(oldWndProc, hWnd, uMsg, wParam, lParam);
+		if (!res)
+			if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam) || ImGui::GetIO().WantCaptureMouse)
+				return true;
+		return res;
 	}
 
 	HRESULT __stdcall Hooked_EndScene(IDirect3DDevice9* pDevice) {
 		static bool init = true;
 
-		//if (GetForegroundWindow() != *SOKU_HWND) return ((EndSceneFn)oldVTable[42])(pDevice);
 		if(!active) return ((EndSceneFn)oldVTable[42])(pDevice);
 
 		if (init)
@@ -201,10 +204,6 @@ namespace ImGuiMan {
 			init = false;
 			ImGui::CreateContext();
 			ImGuiIO& io = ImGui::GetIO();
-
-			io.WantCaptureKeyboard = true;
-			io.WantCaptureMouse = true;
-			io.WantTextInput = true;
 			
 			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 			io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
@@ -266,20 +265,34 @@ namespace ImGuiMan {
 		return newVTable;
 	}
 
-	DWORD WINAPI HookThread(PassedFn load, PassedFn render) {
+	void Hook(HWND hwnd, IDirect3DDevice9* device) {
+		window = hwnd;
+		oldVTable = *(void***)device;
+		newVTable = CreateDummyVTable(oldVTable);
+		(((void**)device)[0]) = newVTable;
+	}
+
+	bool __fastcall Hooked_SokuSetup(void** DxWinHwnd, void* EDX, HWND* hwnd) {
+		bool ret = Original_SokuSetup(DxWinHwnd, hwnd);
+		Hook(*hwnd, *SOKU_D3D_DEVICE);
+		return ret;
+	}
+
+	void SetupHookSync(PassedFn load, PassedFn render) {
+		LoadFunction = load;
+		RenderFunction = render;
+
+		Original_SokuSetup = (SokuSetupFn)PatchMan::HookNear(0x7fb871, (DWORD)Hooked_SokuSetup);
+	}
+
+	void SetupHookAsync(PassedFn load, PassedFn render) {
 		while (*SOKU_D3D_DEVICE == 0 || *SOKU_HWND == 0)
 			this_thread::sleep_for(10ms);
 
 		LoadFunction = load;
 		RenderFunction = render;
 
-		window = *SOKU_HWND;
-		void*** Device = *(void****)SOKU_D3D_DEVICE;
-		oldVTable = *(void***)Device;
-		newVTable = CreateDummyVTable(oldVTable);
-		(((void**)Device)[0]) = newVTable;
-
-		return 0;
+		Hook(*SOKU_HWND, *SOKU_D3D_DEVICE);
 	}
 }
 

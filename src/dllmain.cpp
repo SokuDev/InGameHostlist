@@ -51,6 +51,12 @@ int debounceFrames = 0;
 mutex host_mutex;
 deque<string> host_payloads;
 
+char temp_message[256] = { 0 };
+
+Dialog *IntroDialog;
+Dialog *HostMessageDialog;
+Dialog *ClipboardDialog;
+
 void Update() {
 	while (true) {
 		if (inMenu == true)
@@ -90,7 +96,7 @@ void Render() {
 			Menu::OnMenuOpen();
 			Hostlist::OnMenuOpen();
 
-			HostingOptions::enabled = false;
+			DialogMan::DisableAll();
 			SokuAPI::InputBlock.Toggle(false);
 			SokuAPI::InputWorkaround.Toggle(true);
 			hosting = false;
@@ -100,7 +106,7 @@ void Render() {
 
 			if (firstRun) {
 				firstRun = false;
-				DialogMan::OpenDialog("Introduction");
+				IntroDialog->Active = true;
 			}
 		}
 		CDesignSprite* msgbox = SokuAPI::GetMsgBox();
@@ -130,27 +136,27 @@ void Render() {
 
 		Menu::Render();
 		Hostlist::Render();
-		HostingOptions::Render();
 		DialogMan::Render();
 
-		Menu::HandleInput();
-		Hostlist::HandleInput();
-
-		//This got surprisingly messy, basic logic is that if inputs are disabled 
-		//and you press B or both of the submenus are inactive it exits out, this is
-		//mostly meant so you can't end up in situations where the inputs are fully blocked
-		//With the extra hosting options check it's looking extra messy tho.
 		bool dialogsActive = DialogMan::AnyActive();
-		if(dialogsActive)
+		if (dialogsActive) {
 			SokuAPI::InputBlock.Toggle(true);
+		}
+		else {
+			Menu::HandleInput();
+			Hostlist::HandleInput();
 
-		if (SokuAPI::InputBlock.Check() && (input->P1.B == 1 || (!HostingOptions::enabled && !Hostlist::active && !dialogsActive))) {
-			if (!HostingOptions::enabled && !DialogMan::ModalActive()) {
-				Hostlist::active = false;
-				HostingOptions::enabled = false;
-				SokuAPI::InputBlock.Toggle(false);
-				SokuAPI::SfxPlay(SFX_BACK);
-				input->P1.B = 10;
+			//This got surprisingly messy, basic logic is that if inputs are disabled 
+			//and you press B or both of the submenus are inactive it exits out, this is
+			//mostly meant so you can't end up in situations where the inputs are fully blocked
+			//With the extra hosting options check it's looking extra messy tho.
+			if (SokuAPI::InputBlock.Check() && (input->P1.B == 1 || (!Hostlist::active && !dialogsActive))) {
+				if (!ImGui::GetIO().WantTextInput) {
+					Hostlist::active = false;
+					SokuAPI::InputBlock.Toggle(false);
+					SokuAPI::SfxPlay(SFX_BACK);
+					input->P1.B = 10;
+				}
 			}
 		}
 	}
@@ -175,6 +181,7 @@ void Init(void *unused) {
 	PingMan::Init();
 	atexit(PingMan::Cleanup);
 	
+	HostingOptions::Init();
 	HostingOptions::LoadConfig();
 	
 	Menu::Init();
@@ -189,7 +196,7 @@ void Init(void *unused) {
 		freopen("CONOUT$", "w", stdout);
 	}
 
-	DialogMan::AddDialog("Introduction", []() {
+	IntroDialog = DialogMan::AddDialog("Introduction", []() {
 		ImGui::Text(
 			"Welcome to InGame-Hostlist,\n"
 			"A mod that lets you use a hostlist from inside the game.\n\n"
@@ -210,8 +217,41 @@ void Init(void *unused) {
 		if (debounceFrames++ > 60 && ImGui::GetIO().NavInputs[ImGuiNavInput_Activate]) {
 			SokuAPI::InputBlock.Toggle(false);
 			SokuAPI::SfxPlay(SFX_SELECT);
-			ImGui::CloseCurrentPopup();
+			return false;
 		}
+		return true;
+	});
+
+	HostMessageDialog = DialogMan::AddDialog("Please enter your host message", []() {
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Host Message:");
+		ImGui::SameLine();
+		ImGui::InputText("", temp_message, 256);
+		if (ImGui::Button("Confirm")) {
+			Status::Normal("Hosting...", Status::forever);
+			SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
+
+			if (HostingOptions::publicHost) {
+				JSON data = {
+					"profile_name",
+					SokuAPI::GetProfileName(1),
+					"message",
+					temp_message,
+					"port",
+					HostingOptions::port,
+				};
+				host_mutex.lock();
+				host_payloads.emplace_back(data.dump());
+				host_mutex.unlock();
+			}
+
+			SokuAPI::InputBlock.Toggle(false);
+			SokuAPI::SfxPlay(SFX_SELECT);
+
+			hosting = !hosting;
+			return false;
+		}
+		return true;
 	});
 	
 	Menu::AddItem("Host", []() {
@@ -228,21 +268,26 @@ void Init(void *unused) {
 				return;
 			}
 
-			Status::Normal("Hosting...", Status::forever);
-			SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
-			
-			if (HostingOptions::publicHost) {
-				JSON data = {
-					"profile_name",
-					SokuAPI::GetProfileName(1),
-					"message",
-					HostingOptions::message,
-					"port",
-					HostingOptions::port,
-				};
-				host_mutex.lock();
-				host_payloads.emplace_back(data.dump());
-				host_mutex.unlock();
+			if (HostingOptions::defaultMessage) {
+				HostMessageDialog->Active = true;
+			}
+			else {
+				Status::Normal("Hosting...", Status::forever);
+				SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
+
+				if (HostingOptions::publicHost) {
+					JSON data = {
+						"profile_name",
+						SokuAPI::GetProfileName(1),
+						"message",
+						HostingOptions::message,
+						"port",
+						HostingOptions::port,
+					};
+					host_mutex.lock();
+					host_payloads.emplace_back(data.dump());
+					host_mutex.unlock();
+				}
 			}
 		}
 		hosting = !hosting;
@@ -263,34 +308,38 @@ void Init(void *unused) {
 	});
 	
 	Menu::AddItem("Options", []() {
-		HostingOptions::enabled = !HostingOptions::enabled;
-		SokuAPI::InputBlock.Toggle(true);
+		HostingOptions::dialog->Active = true;
 		SokuAPI::ClearMenu();
 	});
 
-	DialogMan::AddDialog("Clipboard", []() {
+	ClipboardDialog = DialogMan::AddDialog("Clipboard", []() {
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Do you want to join or spectate this host?");
 
 		ImGui::SetCursorPosX(100);
 		if (ImGui::Button("Join")) {
+			Status::Normal("Joining...", Status::forever);
+
 			ImGui::CloseCurrentPopup(); 
 			SokuAPI::JoinHost(NULL, 0);
 			SokuAPI::InputBlock.Toggle(false);
 			SokuAPI::SfxPlay(SFX_SELECT);
+			return false;
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Spectate")) {
-			ImGui::CloseCurrentPopup();
+			Status::Normal("Joining...", Status::forever);
+
 			SokuAPI::JoinHost(NULL, 0, true);
 			SokuAPI::InputBlock.Toggle(false);
 			SokuAPI::SfxPlay(SFX_SELECT);
+			return false;
 		}
+		return true;
 	});
 	
 	Menu::AddItem("Join from clipboard", []() {
-		Status::Normal("Joining...", Status::forever);
-		DialogMan::OpenDialog("Clipboard");
+		ClipboardDialog->Active = true;
 		SokuAPI::ClearMenu();
 	});
 	
@@ -308,7 +357,7 @@ void Init(void *unused) {
 		SokuAPI::ClearMenu();
 	});
 	
-	hookThread = new thread(ImGuiMan::HookThread, Load, Render);
+	printf("Init done.\n");
 }
 
 extern "C" __declspec(dllexport) bool CheckVersion(const BYTE hash[16]) {
@@ -344,6 +393,9 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	}
 	
 	_beginthread(Init, 0, NULL);
+
+	ImGuiMan::SetupHookSync(Load, Render);
+
 	return TRUE;
 }
 
