@@ -23,7 +23,7 @@ namespace HostingOptions {
 		WritePrivateProfileStringW(L"InGameHostlist", L"Port", &std::to_wstring(port)[0], &config_path[0]);
 		WritePrivateProfileStringW(L"InGameHostlist", L"Spectatable", spectate ? L"1" : L"0", &config_path[0]);
 		WritePrivateProfileStringW(L"InGameHostlist", L"Hostlist", publicHost ? L"1" : L"0", &config_path[0]);
-		WritePrivateProfileStringW(L"InGameHostlist", L"showMessagePrompt", showMessagePrompt ? L"1" : L"0", &config_path[0]);
+		WritePrivateProfileStringW(L"InGameHostlist", L"ShowMessagePrompt", showMessagePrompt ? L"1" : L"0", &config_path[0]);
 		WritePrivateProfileStringA("InGameHostlist", "Message", message, &std::string(config_path.begin(), config_path.end())[0]);
 	}
 
