@@ -8,30 +8,21 @@
 
 #define CMENU_OBJ (*(*((*(void ****)UNKNOWN_GLOBAL) + 1) + 2))
 #define CMENUCONNECT_VTABLE ((void*)0x00859300)
-//#define CMENUCONNECT_CNETWORKBASEOBJ ((void**)CMENU_OBJ+4)
-//#define CMENUCONNECT_CHOICE ((char*)CMENU_OBJ)[8]
-//#define CMENUCONNECT_SUBCHOICE ((char*)CMENU_OBJ)[9]
-//#define CMENUCONNECT_SPECTATE ((char*)CMENU_OBJ)[953]
-//#define CMENUCONNECT_IPPORTSTR1 ((char*)CMENU_OBJ+1072) //This one matters
-//#define CMENUCONNECT_IPPORTSTR2 ((char*)CMENU_OBJ+1096)
-//#define CMENUCONNECT_PORT (((uint*)CMENU_OBJ)[266])
-//#define CMENUCONNECT_CURSORPOS (((char*)CMENU_OBJ)[968])
 
 #define MSGBOX_OBJ (*(void **)0x089a390)
-//#define MSGBOX_ACTIVE (*(((unsigned char*)MSGBOX_OBJ)+20))
-//#define MSGBOX_X *(((float*)MSGBOX_OBJ)+3)
-//#define MSGBOX_Y *(((float*)MSGBOX_OBJ)+4)
 
 #define CINPUTMANAGERCLUSTER_OBJ ((void *)0x0089a248)
-//#define INPUT_CLICKED_XAXIS (((int*)CINPUTMANAGERCLUSTER_OBJ)[0xE])
-//#define INPUT_CLICKED_YAXIS (((int*)CINPUTMANAGERCLUSTER_OBJ)[0xF])
-//#define INPUT_CLICKED_A (((int*)CINPUTMANAGERCLUSTER_OBJ)[0x10])
-//#define INPUT_CLICKED_B (((int*)CINPUTMANAGERCLUSTER_OBJ)[0x11])
 
 #define SCENE_ID ((byte*)0x008A0044)
 
 #define PROFILE1_DECKNAME ((VC9String *)0x0899840)
 #define PROFILE2_DECKNAME ((VC9String *)0x089985C)
+
+#define WINDOW_HEIGHT 509.0
+#define WINDOW_WIDTH 646.0
+
+#define SOKU_HWND ((HWND*)0x0089FF90)
+#define SOKU_D3D9_DEVICE ((IDirect3DDevice9**)0x08a0e30)
 
 #define SFX_PLAY_FUNPTR 0x043e1e0
 #define SFX_MOVE 0x27

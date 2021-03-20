@@ -1,6 +1,5 @@
 #pragma once
 #include <iostream>
-#include <functional>
 #include <vector>
 #include <string>
 #include <imgui.h>
@@ -22,18 +21,16 @@ struct Dialog {
 		Title(title), Flags(flags), Active(false), Callback(callback) {}
 };
 
-
 namespace DialogMan {
 	vector<Dialog*> dialogs;
-
-	Dialog *AddDialog(string title, DialogFunction callback) {
-		dialogs.push_back(new Dialog(title, callback));
-		return dialogs.back();
-	}
 
 	Dialog *AddDialog(string title, ImGuiWindowFlags flags, DialogFunction callback) {
 		dialogs.push_back(new Dialog(title, flags, callback));
 		return dialogs.back();
+	}
+
+	Dialog* AddDialog(string title, DialogFunction callback) {
+		return AddDialog(title, 0, callback);
 	}
 
 	void Render() {
@@ -41,13 +38,11 @@ namespace DialogMan {
 		for (Dialog *d : dialogs) {
 			if (d->Active) {
 				ImGuiMan::SetNextWindowPosCenter();
-				ImGui::Begin(d->Title.c_str(), &(d->Active), ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | d->Flags);
+				ImGui::Begin(d->Title.c_str(), NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | d->Flags);
 				if (ImGui::IsWindowAppearing()) {
 					ImGui::GetIO().NavVisible = true;
 					ImGui::GetIO().NavActive = true;
 				}
-
-				d->Active = d->Callback();
 
 				if (io.NavInputs[ImGuiNavInput_Cancel] && !io.WantTextInput) {
 					d->Active = false;

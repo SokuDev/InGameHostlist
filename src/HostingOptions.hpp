@@ -11,7 +11,7 @@ namespace HostingOptions {
 	int port;
 	bool spectate = true;
 	bool publicHost = true;
-	bool defaultMessage;
+	bool showMessagePrompt = true;
 	char message[256] = {0};
 
 	Dialog *dialog;
@@ -23,7 +23,7 @@ namespace HostingOptions {
 		WritePrivateProfileStringW(L"InGameHostlist", L"Port", &std::to_wstring(port)[0], &config_path[0]);
 		WritePrivateProfileStringW(L"InGameHostlist", L"Spectatable", spectate ? L"1" : L"0", &config_path[0]);
 		WritePrivateProfileStringW(L"InGameHostlist", L"Hostlist", publicHost ? L"1" : L"0", &config_path[0]);
-		WritePrivateProfileStringW(L"InGameHostlist", L"DefaultMessage", publicHost ? L"1" : L"0", &config_path[0]);
+		WritePrivateProfileStringW(L"InGameHostlist", L"showMessagePrompt", showMessagePrompt ? L"1" : L"0", &config_path[0]);
 		WritePrivateProfileStringA("InGameHostlist", "Message", message, &std::string(config_path.begin(), config_path.end())[0]);
 	}
 
@@ -34,7 +34,7 @@ namespace HostingOptions {
 		port = GetPrivateProfileIntW(L"InGameHostlist", L"Port", 10800, &config_path[0]);
 		spectate = GetPrivateProfileIntW(L"InGameHostlist", L"Spectatable", 1, &config_path[0]) != 0;
 		publicHost = GetPrivateProfileIntW(L"InGameHostlist", L"Hostlist", 1, &config_path[0]) != 0;
-		defaultMessage = GetPrivateProfileIntW(L"InGameHostlist", L"DefaultMessage", 1, &config_path[0]) != 0;
+		showMessagePrompt = GetPrivateProfileIntW(L"InGameHostlist", L"ShowMessagePrompt", 1, &config_path[0]) != 0;
 		GetPrivateProfileStringA("InGameHostlist", "Message", "", message, sizeof(message), &std::string(config_path.begin(), config_path.end())[0]);
 	}
 
@@ -50,25 +50,23 @@ namespace HostingOptions {
 			ImGui::PopItemWidth();
 
 			ImGui::AlignTextToFramePadding();
-			ImGui::Text("Spectatable?");
+			ImGui::Text("Spectatable?   ");
 			ImGui::SameLine();
 			ImGui::Checkbox("##spec", &spectate);
 
 			ImGui::AlignTextToFramePadding();
-			ImGui::Text("Post to bot?");
+			ImGui::Text("Post to bot?   ");
 			ImGui::SameLine();
 			ImGui::Checkbox("##public", &publicHost);
 
 			ImGui::AlignTextToFramePadding();
-			ImGui::Text("Default msg?");
+			ImGui::Text("Prompt for msg?");
 			ImGui::SameLine();
-			ImGui::Checkbox("##static", &defaultMessage);
+			ImGui::Checkbox("##static", &showMessagePrompt);
 
 			ImGui::Text("Host message:");
 			ImGui::PushItemWidth(130);
-			if (!defaultMessage) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5);
-			ImGui::InputText("##msg", message, 255, ImGuiInputTextFlags_ReadOnly * !defaultMessage);
-			if (!defaultMessage) ImGui::PopStyleVar();
+			ImGui::InputText("##msg", message, 255);
 			ImGui::PopItemWidth();
 			
 			if (ImGui::Button("Save")) {

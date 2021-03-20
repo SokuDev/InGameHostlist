@@ -51,8 +51,6 @@ int debounceFrames = 0;
 mutex host_mutex;
 deque<string> host_payloads;
 
-char temp_message[256] = { 0 };
-
 Dialog *IntroDialog;
 Dialog *HostMessageDialog;
 Dialog *ClipboardDialog;
@@ -109,17 +107,12 @@ void Render() {
 				IntroDialog->Active = true;
 			}
 		}
-		CDesignSprite* msgbox = SokuAPI::GetMsgBox();
 		CInputManagerCluster* input = SokuAPI::GetInputManager();
 
 		// Debug window
 		if (DEBUG) {
 			ImGui::Begin("DebugInfo", 0);
 			ImGui::Text("DebugInfo:");
-			ImGui::Text("   MsgBox addr: %08X", msgbox);
-			ImGui::Text("   MsgBox active: %d", msgbox->active);
-			ImGui::Text("   MsgBox X: %f", msgbox->x);
-			ImGui::Text("   MsgBox Y: %f", msgbox->y);
 			ImGui::Text("   Menu addr: %08X", menu);
 			ImGui::Text("   Menu choice: %d", menu->Choice);
 			ImGui::Text("   Menu subchoice: %d", menu->Subchoice);
@@ -226,17 +219,18 @@ void Init(void *unused) {
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Host Message:");
 		ImGui::SameLine();
-		ImGui::InputText("", temp_message, 256);
+		ImGui::InputText("", HostingOptions::message, 256);
 		if (ImGui::Button("Confirm")) {
 			Status::Normal("Hosting...", Status::forever);
 			SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
+			HostingOptions::SaveConfig();
 
 			if (HostingOptions::publicHost) {
 				JSON data = {
 					"profile_name",
 					SokuAPI::GetProfileName(1),
 					"message",
-					temp_message,
+					HostingOptions::message,
 					"port",
 					HostingOptions::port,
 				};
@@ -248,7 +242,7 @@ void Init(void *unused) {
 			SokuAPI::InputBlock.Toggle(false);
 			SokuAPI::SfxPlay(SFX_SELECT);
 
-			hosting = !hosting;
+			hosting = true;
 			return false;
 		}
 		return true;
@@ -268,8 +262,10 @@ void Init(void *unused) {
 				return;
 			}
 
-			if (HostingOptions::defaultMessage) {
+			if (HostingOptions::showMessagePrompt) {
 				HostMessageDialog->Active = true;
+				SokuAPI::ClearMenu();
+				return;
 			}
 			else {
 				Status::Normal("Hosting...", Status::forever);

@@ -27,11 +27,6 @@ using namespace std;
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-#define WINDOW_HEIGHT 509.0
-#define WINDOW_WIDTH 646.0
-#define SOKU_HWND ((HWND*)0x0089FF90)
-#define SOKU_D3D_DEVICE ((IDirect3DDevice9**)0x08a0e30)
-
 struct Image {
 	PDIRECT3DTEXTURE9 Texture;
 	ImVec2 Size;
@@ -77,7 +72,7 @@ namespace ImGuiMan {
 	Image *LoadImageFromFile(wstring filename) {
 		// Load texture from disk
 		PDIRECT3DTEXTURE9 texture;
-		HRESULT hr = D3DXCreateTextureFromFileW(*SOKU_D3D_DEVICE, filename.c_str(), &texture);
+		HRESULT hr = D3DXCreateTextureFromFileW(*SOKU_D3D9_DEVICE, filename.c_str(), &texture);
 		if (hr != S_OK)
 			return NULL;
 
@@ -172,14 +167,14 @@ namespace ImGuiMan {
 			io.MousePos.y = correct_y;
 		}
 		else if (uMsg == WM_SIZE) {
-			void*** Device = *(void****)SOKU_D3D_DEVICE;
+			void*** Device = *(void****)SOKU_D3D9_DEVICE;
 			if (wParam == SIZE_MINIMIZED)
 				active = false;
 			else if (wParam == SIZE_RESTORED)
 				active = true;
 		}
 		else if (uMsg == WM_ACTIVATEAPP && !windowed) {
-			void*** Device = *(void****)SOKU_D3D_DEVICE;
+			void*** Device = *(void****)SOKU_D3D9_DEVICE;
 			if(!wParam)
 				active = false;
 			else
@@ -274,7 +269,7 @@ namespace ImGuiMan {
 
 	bool __fastcall Hooked_SokuSetup(void** DxWinHwnd, void* EDX, HWND* hwnd) {
 		bool ret = Original_SokuSetup(DxWinHwnd, hwnd);
-		Hook(*hwnd, *SOKU_D3D_DEVICE);
+		Hook(*hwnd, *SOKU_D3D9_DEVICE);
 		return ret;
 	}
 
@@ -286,13 +281,13 @@ namespace ImGuiMan {
 	}
 
 	void SetupHookAsync(PassedFn load, PassedFn render) {
-		while (*SOKU_D3D_DEVICE == 0 || *SOKU_HWND == 0)
+		while (*SOKU_D3D9_DEVICE == 0 || *SOKU_HWND == 0)
 			this_thread::sleep_for(10ms);
 
 		LoadFunction = load;
 		RenderFunction = render;
 
-		Hook(*SOKU_HWND, *SOKU_D3D_DEVICE);
+		Hook(*SOKU_HWND, *SOKU_D3D9_DEVICE);
 	}
 }
 
