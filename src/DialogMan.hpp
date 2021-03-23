@@ -1,6 +1,6 @@
 #pragma once
 #include <iostream>
-#include <vector>
+#include <list>
 #include <string>
 #include <imgui.h>
 #include "ImGuiMan.hpp"
@@ -22,7 +22,7 @@ struct Dialog {
 };
 
 namespace DialogMan {
-	vector<Dialog*> dialogs;
+	list<Dialog*> dialogs;
 
 	Dialog *AddDialog(string title, ImGuiWindowFlags flags, DialogFunction callback) {
 		dialogs.push_back(new Dialog(title, flags, callback));
@@ -43,6 +43,8 @@ namespace DialogMan {
 					ImGui::GetIO().NavVisible = true;
 					ImGui::GetIO().NavActive = true;
 				}
+
+				d->Active = d->Callback();
 
 				if (io.NavInputs[ImGuiNavInput_Cancel] && !io.WantTextInput) {
 					d->Active = false;
