@@ -125,7 +125,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>d3dx9.lib;d3d9.lib;libcurl_a.lib;Ws2_32.lib;Wldap32.lib;Crypt32.lib;Normaliz.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Xinput.lib;d3dx9.lib;d3d9.lib;libcurl_a.lib;Ws2_32.lib;Wldap32.lib;Crypt32.lib;Normaliz.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -162,7 +162,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>$(ProjectDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>d3dx9.lib;d3d9.lib;libcurl_a.lib;Ws2_32.lib;Wldap32.lib;Crypt32.lib;Normaliz.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Xinput.lib;d3dx9.lib;d3d9.lib;libcurl_a.lib;Ws2_32.lib;Wldap32.lib;Crypt32.lib;Normaliz.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <CustomBuildStep>

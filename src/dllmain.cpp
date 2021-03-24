@@ -382,7 +382,7 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 			firstRun = !value;
 		} else {
 			value = 1;
-			RegSetKeyValueW(key, NULL, L"HostlistShownPrompt", REG_DWORD, &value, sizeof(value));
+			RegSetValueExW(key, L"HostlistShownPrompt", 0, REG_DWORD, (BYTE*)&value, sizeof(value));
 			firstRun = true;
 		}
 		RegCloseKey(key);
