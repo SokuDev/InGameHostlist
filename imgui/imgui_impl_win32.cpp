@@ -149,10 +149,6 @@ static void ImGui_ImplWin32_UpdateMousePos()
     */
 }
 
-#ifdef _MSC_VER
-#pragma comment(lib, "xinput")
-#endif
-
 // Gamepad navigation mapping
 static void ImGui_ImplWin32_UpdateGamepads()
 {
