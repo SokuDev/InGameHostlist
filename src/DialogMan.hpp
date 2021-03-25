@@ -38,7 +38,7 @@ namespace DialogMan {
 		for (Dialog *d : dialogs) {
 			if (d->Active) {
 				ImGuiMan::SetNextWindowPosCenter();
-				ImGui::Begin(d->Title.c_str(), NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | d->Flags);
+				ImGui::Begin(d->Title.c_str(), NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | d->Flags);
 				if (ImGui::IsWindowAppearing()) {
 					ImGui::GetIO().NavVisible = true;
 					ImGui::GetIO().NavActive = true;
@@ -65,5 +65,20 @@ namespace DialogMan {
 	void DisableAll() {
 		for (Dialog* d : dialogs)
 			d->Active = false;
+	}
+
+	//Wrapper for requiring the button to be unpressed for at least a frame before accepting input
+	//Doesn't work with multiple dialogs open though
+	bool IsActivatePressed() {
+		static bool wasInactive = false;
+
+		if (!ImGui::GetIO().NavInputs[ImGuiNavInput_Activate]) {
+			wasInactive = true;
+		}
+		else if (wasInactive) {
+			wasInactive = false;
+			return true;
+		}
+		return false;
 	}
 };

@@ -46,8 +46,6 @@ bool firstTime = true;
 bool hosting = false;
 bool inMenu = false;
 
-int debounceFrames = 0;
-
 mutex host_mutex;
 deque<string> host_payloads;
 
@@ -207,7 +205,7 @@ void Init(void *unused) {
 			"online, have fun!\n\n"
 			"Press A/B to continue.\n");
 
-		if (debounceFrames++ > 60 && ImGui::GetIO().NavInputs[ImGuiNavInput_Activate]) {
+		if (DialogMan::IsActivatePressed()) {
 			SokuAPI::InputBlock.Toggle(false);
 			SokuAPI::SfxPlay(SFX_SELECT);
 			return false;
@@ -220,7 +218,7 @@ void Init(void *unused) {
 		ImGui::Text("Host Message:");
 		ImGui::SameLine();
 		ImGui::InputText("", HostingOptions::message, 256);
-		if (ImGui::Button("Confirm")) {
+		if (ImGui::Button("Confirm") || (DialogMan::IsActivatePressed() && !ImGui::IsAnyItemFocused())) {
 			Status::Normal("Hosting...", Status::forever);
 			SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
 			HostingOptions::SaveConfig();
