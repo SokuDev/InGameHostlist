@@ -4,6 +4,7 @@
 #include "Status.hpp"
 #include <string>
 #include <vector>
+#include <mmsystem.h>
 using namespace std;
 
 #define SHORT_WAITTIME 3000
@@ -41,17 +42,26 @@ namespace Hostlist {
 	const ImColor colorGrayedOut = ImColor(180, 180, 180, 255);
 	const ImColor colorError = ImColor(255, 0, 0, 255);
 
+	wstring sfxPath;
+
 	mutex updatingHostlist;
 
 	void Init() {
 		Status::Init();
+
+		sfxPath = module_path;
+		sfxPath.append(L"\\NewHostSFX.wav");
+		//wchar_t fullSfxPath[MAX_PATH*2];
+		//GetFullPathNameW(relativeSfxPath.c_str(), sizeof(wchar_t) * MAX_PATH*2, fullSfxPath, NULL);
+		//sfxPath = wstring(fullSfxPath);
+		return;
 	}
 
 	void Load() {
-		std::wstring image_path = module_path;
-		image_path.append(L"\\hostlistBG.png");
+		std::wstring imagePath = module_path;
+		imagePath.append(L"\\hostlistBG.png");
 
-		imageBackground = ImGuiMan::LoadImageFromFile(image_path);
+		imageBackground = ImGuiMan::LoadImageFromFile(imagePath);
 	}
 
 	void OnMenuOpen() {
@@ -61,6 +71,28 @@ namespace Hostlist {
 		Status::OnMenuOpen();
 
 		InputManager = SokuAPI::GetInputManager();
+	}
+
+	bool CheckForNewHosts(JSON &jHosts) {
+		for (unsigned int i = 0; i < jHosts.length(); ++i) {
+			if (jHosts[i]["started"].ToBool())
+				continue;
+			bool isNewHost = true;
+			for (unsigned int j = 0; j < hosts[WAITING].size(); ++j) {
+				if (hosts[WAITING][j]->Compare(jHosts[i])) {
+					isNewHost = false;
+					break;
+				}
+			}
+			if (isNewHost)
+				return true;
+		}
+		return false;
+	}
+
+	//Play sfx when a new waiting host appears
+	void OnNewHost() {
+		PlaySound(sfxPath.c_str(), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 	}
 
 	void Update() {
@@ -78,6 +110,9 @@ namespace Hostlist {
 					JSON res = JSON::Load(s);
 					lock_guard<mutex> lock(updatingHostlist);
 
+					if (CheckForNewHosts(res))
+						OnNewHost();
+
 					for (unsigned int page = 0; page < PAGE_COUNT; ++page) {
 						for (unsigned int i = 0; i < hosts[page].size(); ++i) {
 							delete hosts[page][i];
@@ -85,12 +120,12 @@ namespace Hostlist {
 						hosts[page].clear();
 					}
 
-					for (int i = 0; i < res.length(); ++i) {
-						Host *newHost = new Host(res[i]);
-						if (newHost->playing)
-							hosts[PLAYING].push_back(newHost);
+					for (unsigned int i = 0; i < res.length(); ++i) {
+						Host *host = new Host(res[i]);
+						if (host->playing)
+							hosts[PLAYING].push_back(host);
 						else
-							hosts[WAITING].push_back(newHost);
+							hosts[WAITING].push_back(host);
 					}
 
 					if (active) {
