@@ -22,6 +22,10 @@ struct Dialog {
 };
 
 namespace DialogMan {
+	namespace {
+		bool wasInactive = false;
+	}
+
 	list<Dialog*> dialogs;
 
 	Dialog *AddDialog(string title, ImGuiWindowFlags flags, DialogFunction callback) {
@@ -42,6 +46,7 @@ namespace DialogMan {
 				if (ImGui::IsWindowAppearing()) {
 					ImGui::GetIO().NavVisible = true;
 					ImGui::GetIO().NavActive = true;
+					wasInactive = false;
 				}
 
 				d->Active = d->Callback();
@@ -70,8 +75,6 @@ namespace DialogMan {
 	//Wrapper for requiring the button to be unpressed for at least a frame before accepting input
 	//Doesn't work with multiple dialogs open though
 	bool IsActivatePressed() {
-		static bool wasInactive = false;
-
 		if (!ImGui::GetIO().NavInputs[ImGuiNavInput_Activate]) {
 			wasInactive = true;
 		}

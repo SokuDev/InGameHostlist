@@ -13,6 +13,7 @@
 #include <Shlwapi.h>
 #include <curl/curl.h>
 #include <iostream>
+#include <stdio.h>
 #include <json.hpp>
 #include <thread>
 #include <imgui.h>
@@ -217,8 +218,9 @@ void Init(void *unused) {
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Host Message:");
 		ImGui::SameLine();
-		ImGui::InputText("", HostingOptions::message, 256);
-		if (ImGui::Button("Confirm") || (DialogMan::IsActivatePressed() && !ImGui::IsAnyItemFocused())) {
+		bool guiConfirm = ImGui::InputText("", HostingOptions::message, 256, ImGuiInputTextFlags_EnterReturnsTrue);
+		guiConfirm = guiConfirm || ImGui::Button("Confirm");
+		if (guiConfirm || (DialogMan::IsActivatePressed() && !ImGui::IsAnyItemFocused())) {
 			Status::Normal("Hosting...", Status::forever);
 			SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
 			HostingOptions::SaveConfig();
