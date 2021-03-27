@@ -56,8 +56,11 @@ Dialog *ClipboardDialog;
 
 void Update() {
 	while (true) {
-		if (inMenu == true)
+		if (inMenu) {
 			Hostlist::Update();
+		} else {
+			gotFirstHostlist = false;
+		}
 		this_thread::sleep_for(1ms);
 	}
 }

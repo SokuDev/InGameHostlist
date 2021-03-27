@@ -17,6 +17,8 @@ using namespace std;
 extern std::wstring module_path;
 extern LARGE_INTEGER timer_frequency;
 
+bool gotFirstHostlist;
+
 namespace Hostlist {
 	enum { WAITING, PLAYING, PAGE_COUNT };
 	vector<Host *> hosts[PAGE_COUNT];
@@ -51,9 +53,6 @@ namespace Hostlist {
 
 		sfxPath = module_path;
 		sfxPath.append(L"\\NewHostSFX.wav");
-		//wchar_t fullSfxPath[MAX_PATH*2];
-		//GetFullPathNameW(relativeSfxPath.c_str(), sizeof(wchar_t) * MAX_PATH*2, fullSfxPath, NULL);
-		//sfxPath = wstring(fullSfxPath);
 		return;
 	}
 
@@ -92,7 +91,7 @@ namespace Hostlist {
 
 	//Play sfx when a new waiting host appears
 	void OnNewHost() {
-		PlaySound(sfxPath.c_str(), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+		PlaySoundW(sfxPath.c_str(), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 	}
 
 	void Update() {
@@ -110,8 +109,9 @@ namespace Hostlist {
 					JSON res = JSON::Load(s);
 					lock_guard<mutex> lock(updatingHostlist);
 
-					if (CheckForNewHosts(res))
+					if (gotFirstHostlist && CheckForNewHosts(res))
 						OnNewHost();
+					gotFirstHostlist = true;
 
 					for (unsigned int page = 0; page < PAGE_COUNT; ++page) {
 						for (unsigned int i = 0; i < hosts[page].size(); ++i) {
