@@ -223,7 +223,7 @@ void Init(void *unused) {
 		ImGui::SameLine();
 		bool guiConfirm = ImGui::InputText("", HostingOptions::message, 256, ImGuiInputTextFlags_EnterReturnsTrue);
 		guiConfirm = guiConfirm || ImGui::Button("Confirm");
-		if (guiConfirm || (DialogMan::IsActivatePressed() && !ImGui::IsAnyItemFocused())) {
+		if (guiConfirm || (DialogMan::IsActivatePressed() && !ImGui::IsAnyItemFocused() && !ImGui::GetIO().WantTextInput)) {
 			Status::Normal("Hosting...", Status::forever);
 			SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
 			HostingOptions::SaveConfig();
