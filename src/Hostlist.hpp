@@ -93,7 +93,8 @@ namespace Hostlist {
 
 	//Play sfx when a new waiting host appears
 	void OnNewHost() {
-		PlaySoundW(sfxPath.c_str(), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+		if(HostingOptions::playSfxOnNewHost)
+			PlaySoundW(sfxPath.c_str(), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 	}
 
 	void Update() {
