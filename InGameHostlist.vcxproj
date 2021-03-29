@@ -162,7 +162,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>$(ProjectDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Xinput.lib;d3dx9.lib;d3d9.lib;libcurl_a.lib;Ws2_32.lib;Wldap32.lib;Crypt32.lib;Normaliz.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Xinput.lib;d3dx9.lib;d3d9.lib;libcurl_a.lib;Ws2_32.lib;Wldap32.lib;Crypt32.lib;Normaliz.lib;shlwapi.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <CustomBuildStep>

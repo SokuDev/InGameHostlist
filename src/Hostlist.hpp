@@ -1,10 +1,12 @@
 #pragma once
-#include "Host.hpp"
-#include "SokuAPI.hpp"
-#include "Status.hpp"
 #include <string>
 #include <vector>
 #include <mmsystem.h>
+#include <nlohmann/json.hpp>
+#include "Host.hpp"
+#include "SokuAPI.hpp"
+#include "Status.hpp"
+
 using namespace std;
 
 #define SHORT_WAITTIME 3000
@@ -72,13 +74,13 @@ namespace Hostlist {
 		InputManager = SokuAPI::GetInputManager();
 	}
 
-	bool CheckForNewHosts(JSON &jHosts) {
-		for (unsigned int i = 0; i < jHosts.length(); ++i) {
-			if (jHosts[i]["started"].ToBool())
+	bool CheckForNewHosts(json &jHosts) {
+		for (auto &jHost : jHosts) {
+			if (jHost["started"].get<bool>())
 				continue;
 			bool isNewHost = true;
 			for (unsigned int j = 0; j < hosts[WAITING].size(); ++j) {
-				if (hosts[WAITING][j]->Compare(jHosts[i])) {
+				if (hosts[WAITING][j]->Compare(jHost)) {
 					isNewHost = false;
 					break;
 				}
@@ -106,7 +108,7 @@ namespace Hostlist {
 			if (newTime - oldTime >= delayTime) {
 				try {
 					string s = WebHandler::Request("http://delthas.fr:14762/games");
-					JSON res = JSON::Load(s);
+					json res = json::parse(s);
 					lock_guard<mutex> lock(updatingHostlist);
 
 					if (gotFirstHostlist && CheckForNewHosts(res))
@@ -120,8 +122,8 @@ namespace Hostlist {
 						hosts[page].clear();
 					}
 
-					for (unsigned int i = 0; i < res.length(); ++i) {
-						Host *host = new Host(res[i]);
+					for (auto &jHost : res) {
+						Host *host = new Host(jHost);
 						if (host->playing)
 							hosts[PLAYING].push_back(host);
 						else

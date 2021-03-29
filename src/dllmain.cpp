@@ -14,7 +14,8 @@
 #include <curl/curl.h>
 #include <iostream>
 #include <stdio.h>
-#include <json.hpp>
+#include <deque>
+#include <nlohmann/json.hpp>
 #include <thread>
 #include <imgui.h>
 
@@ -36,6 +37,7 @@
 #include "DialogMan.hpp"
 
 using namespace std;
+using json = nlohmann::json;
 
 std::wstring module_path;
 LARGE_INTEGER timer_frequency;
@@ -229,13 +231,10 @@ void Init(void *unused) {
 			HostingOptions::SaveConfig();
 
 			if (HostingOptions::publicHost) {
-				JSON data = {
-					"profile_name",
-					SokuAPI::GetProfileName(1),
-					"message",
-					HostingOptions::message,
-					"port",
-					HostingOptions::port,
+				json data = {
+					{"profile_name", SokuAPI::GetProfileName(1)},
+					{"message", HostingOptions::message},
+					{"port", HostingOptions::port}
 				};
 				host_mutex.lock();
 				host_payloads.emplace_back(data.dump());
@@ -275,13 +274,10 @@ void Init(void *unused) {
 				SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
 
 				if (HostingOptions::publicHost) {
-					JSON data = {
-						"profile_name",
-						SokuAPI::GetProfileName(1),
-						"message",
-						HostingOptions::message,
-						"port",
-						HostingOptions::port,
+					json data = {
+						{"profile_name", SokuAPI::GetProfileName(1)},
+						{"message", HostingOptions::message},
+						{"port", HostingOptions::port}
 					};
 					host_mutex.lock();
 					host_payloads.emplace_back(data.dump());

@@ -1,9 +1,9 @@
 #pragma once
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <ctime>
 using namespace std;
-using namespace json;
+using json = nlohmann::json;
 
 struct Host {
 	string name;
@@ -23,10 +23,10 @@ struct Host {
 		netPort = htons(port);
 	}
 
-	Host(JSON &jHost):
-		name(jHost["host_name"].ToString()), message(jHost["message"].ToString()), spectateable(jHost["spectateable"].ToBool()), playing(jHost["started"].ToBool()),
-		opponentName(jHost["client_name"].ToString()), startTime(jHost["start"].ToInt()) {
-		string _ipstr = jHost["ip"].ToString();
+	Host(json &jHost):
+		name(jHost["host_name"].get<string>()), message(jHost["message"].get<string>()), spectateable(jHost["spectatable"].get<bool>()), playing(jHost["started"].get<bool>()),
+		opponentName(jHost["client_name"].get<string>()), startTime(jHost["start"].get<int>()) {
+		string _ipstr = jHost["ip"].get<string>();
 		size_t _sep = _ipstr.find(':');
 		ip = _ipstr.substr(0, _sep);
 		port = stoi(_ipstr.substr(_sep + 1));
@@ -39,8 +39,8 @@ struct Host {
 			this->name == other_host->name;
 	}
 
-	bool Compare(JSON &jHost) {
-		return this->startTime == jHost["start"].ToInt() &&
-			this->name == jHost["host_name"].ToString();
+	bool Compare(json &jHost) {
+		return this->startTime == jHost["start"].get<int>() &&
+			this->name == jHost["host_name"].get<string>();
 	}
 };
