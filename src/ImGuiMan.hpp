@@ -58,7 +58,6 @@ namespace ImGuiMan {
 	bool RemapNavFlag = true;
 
 	bool active = true;
-	bool windowed = true;
 
 	SokuSetupFn Original_SokuSetup = NULL;
 
@@ -172,7 +171,7 @@ namespace ImGuiMan {
 			else if (wParam == SIZE_RESTORED)
 				active = true;
 		}
-		else if (uMsg == WM_ACTIVATEAPP && !windowed) {
+		else if (uMsg == WM_ACTIVATEAPP && !SOKU_D3DPRESENT_PARAMETERS->Windowed) {
 			if(!wParam)
 				active = false;
 			else
@@ -242,8 +241,6 @@ namespace ImGuiMan {
 			return NULL;
 
 		ImGui_ImplDX9_CreateDeviceObjects();
-
-		windowed = params->Windowed;
 
 		return S_OK;
 	}
