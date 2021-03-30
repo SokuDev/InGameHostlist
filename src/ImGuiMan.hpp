@@ -167,14 +167,12 @@ namespace ImGuiMan {
 			io.MousePos.y = correct_y;
 		}
 		else if (uMsg == WM_SIZE) {
-			void*** Device = *(void****)SOKU_D3D9_DEVICE;
 			if (wParam == SIZE_MINIMIZED)
 				active = false;
 			else if (wParam == SIZE_RESTORED)
 				active = true;
 		}
 		else if (uMsg == WM_ACTIVATEAPP && !windowed) {
-			void*** Device = *(void****)SOKU_D3D9_DEVICE;
 			if(!wParam)
 				active = false;
 			else
