@@ -23,6 +23,10 @@
 #define DEBUG false
 #endif
 
+#ifndef HOOK_METHOD
+#define HOOK_METHOD CallNearHookMethod
+#endif
+
 #define RESET_PATCH_ADDR 0x4151a6
 #define RESET_CALL_ADDR 0x4151ac
 #define ENDSCENE_CALL_ADDR 0x40104c
@@ -298,7 +302,7 @@ namespace ImGuiMan {
 
 	bool __fastcall Hooked_SokuSetup(void** DxWinHwnd, void* EDX, HWND* hwnd) {
 		bool ret = Original_SokuSetup(DxWinHwnd, hwnd);
-		CallNearHookMethod::Hook(*hwnd, *SOKU_D3D9_DEVICE);
+		HOOK_METHOD::Hook(*hwnd, *SOKU_D3D9_DEVICE);
 		return ret;
 	}
 
@@ -316,7 +320,7 @@ namespace ImGuiMan {
 		LoadFunction = load;
 		RenderFunction = render;
 
-		CallNearHookMethod::Hook(*SOKU_HWND, *SOKU_D3D9_DEVICE);
+		HOOK_METHOD::Hook(*SOKU_HWND, *SOKU_D3D9_DEVICE);
 	}
 }
 
