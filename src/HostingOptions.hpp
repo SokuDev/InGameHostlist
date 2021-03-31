@@ -13,6 +13,7 @@ namespace HostingOptions {
 	bool publicHost = true;
 	bool showMessagePrompt = true;
 	bool playSfxOnNewHost = true;
+	bool equalColumnMode = true;
 	char message[256] = {0};
 
 	Dialog *dialog;
@@ -26,6 +27,7 @@ namespace HostingOptions {
 		WritePrivateProfileStringW(L"InGameHostlist", L"Hostlist", publicHost ? L"1" : L"0", &config_path[0]);
 		WritePrivateProfileStringW(L"InGameHostlist", L"PlaySfxOnNewHost", playSfxOnNewHost ? L"1" : L"0", &config_path[0]);
 		WritePrivateProfileStringW(L"InGameHostlist", L"ShowMessagePrompt", showMessagePrompt ? L"1" : L"0", &config_path[0]);
+		WritePrivateProfileStringW(L"InGameHostlist", L"EqualColumnMode", equalColumnMode ? L"1" : L"0", &config_path[0]);
 		WritePrivateProfileStringA("InGameHostlist", "Message", message, &std::string(config_path.begin(), config_path.end())[0]);
 	}
 
@@ -38,6 +40,7 @@ namespace HostingOptions {
 		publicHost = GetPrivateProfileIntW(L"InGameHostlist", L"Hostlist", 1, &config_path[0]) != 0;
 		playSfxOnNewHost = GetPrivateProfileIntW(L"InGameHostlist", L"PlaySfxOnNewHost", 1, &config_path[0]) != 0;
 		showMessagePrompt = GetPrivateProfileIntW(L"InGameHostlist", L"ShowMessagePrompt", 1, &config_path[0]) != 0;
+		equalColumnMode = GetPrivateProfileIntW(L"InGameHostlist", L"EqualColumnMode", 1, &config_path[0]) != 0;
 		GetPrivateProfileStringA("InGameHostlist", "Message", "", message, sizeof(message), &std::string(config_path.begin(), config_path.end())[0]);
 	}
 

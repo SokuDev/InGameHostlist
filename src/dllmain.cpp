@@ -163,12 +163,18 @@ void Render() {
 	}
 }
 
+void Exit() {
+	HostingOptions::SaveConfig();
+}
+
 thread *updateThread;
 thread *hostThread;
 thread *hookThread;
 
 void Init(void *unused) {
 	QueryPerformanceFrequency(&timer_frequency);
+
+	atexit(Exit);
 	
 	SokuAPI::Init();
 	

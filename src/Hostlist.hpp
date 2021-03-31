@@ -165,6 +165,10 @@ namespace Hostlist {
 			float statusSize = (Status::lines - 1) * 16;
 			if (Status::lines == 0) statusSize = 0;
 
+			float nameColumnSize = 100;
+			if (HostingOptions::equalColumnMode)
+				nameColumnSize = 150;
+
 			ImGui::SetNextWindowPos(ImVec2(250, 85));
 			ImGui::SetNextWindowSize(ImVec2(360, 336 + statusSize));
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 0));
@@ -197,8 +201,10 @@ namespace Hostlist {
 
 			if (page_id == WAITING) {
 				ImGui::Columns(3, "waiting");
-				ImGui::SetColumnWidth(0, 100);
-				ImGui::SetColumnWidth(1, 203);
+				ImGui::SetColumnWidth(0, nameColumnSize);
+				ImGui::SetColumnWidth(1, 303 - nameColumnSize);
+				//If you don't add the 2 it cuts off the text despite it not being
+				//Close to the border lol
 				ImGui::SetColumnWidth(2, 32);
 				ImGui::Separator();
 				ImGui::Text("Name");
@@ -312,6 +318,12 @@ namespace Hostlist {
 				InputManager->P1.Xaxis *= 10;
 
 				SokuAPI::SfxPlay(SFX_MOVE);
+			}
+			else if (InputManager->P1.D == 1) {
+				HostingOptions::equalColumnMode = !HostingOptions::equalColumnMode;
+				InputManager->P1.D *= 10;
+
+				SokuAPI::SfxPlay(SFX_SELECT);
 			}
 		}
 
