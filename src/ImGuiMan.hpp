@@ -23,6 +23,14 @@
 #define DEBUG false
 #endif
 
+#ifndef HOOK_METHOD
+#define HOOK_METHOD CallNearHookMethod
+#endif
+
+#define RESET_PATCH_ADDR 0x4151a6
+#define RESET_CALL_ADDR 0x4151ac
+#define ENDSCENE_CALL_ADDR 0x40104c
+
 using namespace std;
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -42,9 +50,6 @@ namespace ImGuiMan {
 	typedef LRESULT(CALLBACK* WNDPROC)(HWND, UINT, WPARAM, LPARAM);
 	WNDPROC oldWndProc;
 
-	void** oldVTable = NULL;
-	void** newVTable = NULL;
-
 	typedef void (*PassedFn)(void);
 	//For loading images/fonts.
 	PassedFn LoadFunction = NULL;
@@ -60,6 +65,8 @@ namespace ImGuiMan {
 	bool active = true;
 
 	SokuSetupFn Original_SokuSetup = NULL;
+	ResetFn Original_Reset = NULL;
+	EndSceneFn Original_EndScene = NULL;
 
 	Image* LoadImageFromTexture(PDIRECT3DTEXTURE9 texture) {
 		// Retrieve description of the texture surface so we can access its size
@@ -186,85 +193,116 @@ namespace ImGuiMan {
 		return res;
 	}
 
-	HRESULT __stdcall Hooked_EndScene(IDirect3DDevice9* pDevice) {
+	int __stdcall Hooked_EndScene(IDirect3DDevice9* pDevice) {
 		static bool init = true;
 
-		if(!active) return ((EndSceneFn)oldVTable[42])(pDevice);
+		if (active) {
+			if (init) {
+				init = false;
+				ImGui::CreateContext();
+				ImGuiIO& io = ImGui::GetIO();
 
-		if (init)
-		{
-			init = false;
-			ImGui::CreateContext();
-			ImGuiIO& io = ImGui::GetIO();
-			
-			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-			io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+				io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+				io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
-			io.RemapNavFlag = RemapNavFlag;
-			io.RemapNavFun = RemapNav;
+				io.RemapNavFlag = RemapNavFlag;
+				io.RemapNavFun = RemapNav;
 
-			ImGui_ImplWin32_Init(window);
-			ImGui_ImplDX9_Init(pDevice);
+				ImGui_ImplWin32_Init(window);
+				ImGui_ImplDX9_Init(pDevice);
 
-			oldWndProc = (WNDPROC)SetWindowLongPtr(window, GWL_WNDPROC, (LONG_PTR)WndProc);
+				oldWndProc = (WNDPROC)SetWindowLongPtr(window, GWL_WNDPROC, (LONG_PTR)WndProc);
 
-			fontDefault = io.Fonts->AddFontDefault();
+				fontDefault = io.Fonts->AddFontDefault();
 
-			if (LoadFunction != NULL)
-				LoadFunction();
+				if (LoadFunction != NULL)
+					LoadFunction();
 
-			SetupStyle();
+				SetupStyle();
 
-			if(DEBUG) printf("Imgui init done.");
+				if (DEBUG) printf("Imgui init done.");
+			}
+
+			ImGui_ImplDX9_NewFrame();
+			ImGui_ImplWin32_NewFrame();
+			ImGui::NewFrame();
+
+			if (RenderFunction != NULL)
+				RenderFunction();
+
+			ImGui::EndFrame();
+			ImGui::Render();
+
+			ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 		}
 
-		ImGui_ImplDX9_NewFrame();
-		ImGui_ImplWin32_NewFrame();
-		ImGui::NewFrame();
-
-		if(RenderFunction != nullptr)
-			RenderFunction();
-
-		ImGui::EndFrame();
-		ImGui::Render();
-
-		ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
-
-		return ((EndSceneFn)oldVTable[42])(pDevice);
+		//This is necessary so we can fit in the hook...
+		//That said, the return value is never even checked in soku.
+		Original_EndScene(pDevice);
+		return 0x8a0e14;
 	}
 
 	HRESULT __stdcall Hooked_Reset(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* params) {
 		ImGui_ImplDX9_InvalidateDeviceObjects();
 
-		HRESULT hr = ((ResetFn)oldVTable[16])(pDevice, params);
+		HRESULT hr = Original_Reset(pDevice, params);
 		if (hr != S_OK)
-			return NULL;
+			return hr;
 
 		ImGui_ImplDX9_CreateDeviceObjects();
 
 		return S_OK;
 	}
 
-	//Necessary since Dx9 has functions that refresh the vtable...
-	void **CreateDummyVTable(void** oldVTable) {
-		void** newVTable = (void**)malloc(175 * sizeof(void*));
-		memcpy(newVTable, oldVTable, 175 * sizeof(void*));
-		
-		newVTable[42] = (void*)Hooked_EndScene;
-		newVTable[16] = (void*)Hooked_Reset;
-		return newVTable;
+	namespace VTableHookMethod {
+		//Necessary since Dx9 has functions that refresh the vtable...
+		void** CreateDummyVTable(void** oldVTable) {
+			void** newVTable = (void**)malloc(175 * sizeof(void*));
+			memcpy(newVTable, oldVTable, 175 * sizeof(void*));
+
+			newVTable[42] = (void*)Hooked_EndScene;
+			newVTable[16] = (void*)Hooked_Reset;
+			return newVTable;
+		}
+
+		void Hook(HWND hwnd, IDirect3DDevice9* device) {
+			window = hwnd;
+			void** oldVTable = *(void***)device;
+			void** newVTable = CreateDummyVTable(oldVTable);
+			(((void**)device)[0]) = newVTable;
+
+			Original_Reset = (ResetFn)oldVTable[16];
+			Original_EndScene = (EndSceneFn)oldVTable[42];
+		}
 	}
 
-	void Hook(HWND hwnd, IDirect3DDevice9* device) {
-		window = hwnd;
-		oldVTable = *(void***)device;
-		newVTable = CreateDummyVTable(oldVTable);
-		(((void**)device)[0]) = newVTable;
+	namespace CallNearHookMethod {
+		void Hook(HWND hwnd, IDirect3DDevice9* device) {
+			window = hwnd;
+			// Check if something already hooked DxReset.
+			if (*((char*)RESET_CALL_ADDR) != 0xe8) {
+				PatchMan::Patch(RESET_PATCH_ADDR, "\x68\x68\x0f\x8a\x00\x50\xe8\x00\x00\x00\x00\x90\x90", 13).Toggle(true);
+				PatchMan::HookNear(RESET_CALL_ADDR, (DWORD)Hooked_Reset);
+				Original_Reset = (*(ResetFn**)device)[16];
+			}
+			else {
+				Original_Reset = (ResetFn)PatchMan::HookNear(0x4151ac, (DWORD)Hooked_Reset);
+			}
+			// Check if something already hooked DxEndScene
+			if (*((char*)ENDSCENE_CALL_ADDR) != 0xe8) {
+				PatchMan::Patch(ENDSCENE_CALL_ADDR, "\xe8\x00\x00\x00\x00\x50\x90", 7).Toggle(true);
+				PatchMan::HookNear(ENDSCENE_CALL_ADDR, (DWORD)Hooked_EndScene);
+				Original_EndScene = (*(EndSceneFn**)device)[42];
+			}
+			else {
+				Original_EndScene = (EndSceneFn)PatchMan::HookNear(0x40104c, (DWORD)Hooked_EndScene);
+			}
+		}
 	}
 
 	bool __fastcall Hooked_SokuSetup(void** DxWinHwnd, void* EDX, HWND* hwnd) {
 		bool ret = Original_SokuSetup(DxWinHwnd, hwnd);
-		Hook(*hwnd, *SOKU_D3D9_DEVICE);
+		HOOK_METHOD::Hook(*hwnd, *SOKU_D3D9_DEVICE);
 		return ret;
 	}
 
@@ -282,7 +320,7 @@ namespace ImGuiMan {
 		LoadFunction = load;
 		RenderFunction = render;
 
-		Hook(*SOKU_HWND, *SOKU_D3D9_DEVICE);
+		HOOK_METHOD::Hook(*SOKU_HWND, *SOKU_D3D9_DEVICE);
 	}
 }
 
