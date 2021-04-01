@@ -43,6 +43,7 @@ namespace WebHandler {
 		curl_easy_setopt(request_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 		curl_easy_setopt(request_handle, CURLOPT_WRITEDATA, (void *)&request_chunk);
 		curl_easy_setopt(request_handle, CURLOPT_USERAGENT, "swrstoys-ingamehostlist");
+		curl_easy_setopt(request_handle, CURLOPT_SSL_VERIFYPEER, false);
 
 		put_handle = curl_easy_init();
 		curl_easy_setopt(put_handle, CURLOPT_CUSTOMREQUEST, "PUT");
@@ -51,6 +52,7 @@ namespace WebHandler {
 		curl_easy_setopt(put_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 		curl_easy_setopt(put_handle, CURLOPT_WRITEDATA, (void *)&put_chunk);
 		curl_easy_setopt(put_handle, CURLOPT_USERAGENT, "swrstoys-ingamehostlist");
+		curl_easy_setopt(put_handle, CURLOPT_SSL_VERIFYPEER, false);
 	}
 
 	string Request(const string &url) {
