@@ -17,7 +17,7 @@
 #include <imgui_impl_win32.h>
 
 #include "PatchMan.hpp"
-#include "SokuAPI.hpp"
+#include "SokuMan.hpp"
 
 #ifndef DEBUG
 #define DEBUG false
@@ -26,10 +26,6 @@
 #ifndef HOOK_METHOD
 #define HOOK_METHOD CallNearHookMethod
 #endif
-
-#define RESET_PATCH_ADDR 0x4151a6
-#define RESET_CALL_ADDR 0x4151ac
-#define ENDSCENE_CALL_ADDR 0x40104c
 
 using namespace std;
 
@@ -46,11 +42,18 @@ namespace ImGuiMan {
 	typedef HRESULT(__stdcall* EndSceneFn)(IDirect3DDevice9*); 
 	typedef HRESULT(__stdcall* ResetFn)(IDirect3DDevice9*, D3DPRESENT_PARAMETERS*);
 	typedef bool(__thiscall* SokuSetupFn)(void**, HWND*);
-
 	typedef LRESULT(CALLBACK* WNDPROC)(HWND, UINT, WPARAM, LPARAM);
-	WNDPROC oldWndProc;
-
 	typedef void (*PassedFn)(void);
+
+	const auto ResetPatchAddr = (DWORD)0x4151a6;
+	const auto ResetCallAddr = (DWORD)0x4151ac;
+	const auto EndSceneCallAddr = (DWORD)0x40104c;
+
+	WNDPROC Original_WndProc = NULL;
+	SokuSetupFn Original_SokuSetup = NULL;
+	ResetFn Original_Reset = NULL;
+	EndSceneFn Original_EndScene = NULL;
+
 	//For loading images/fonts.
 	PassedFn LoadFunction = NULL;
 	//For rendering with imgui/dx.
@@ -64,10 +67,6 @@ namespace ImGuiMan {
 
 	bool active = true;
 
-	SokuSetupFn Original_SokuSetup = NULL;
-	ResetFn Original_Reset = NULL;
-	EndSceneFn Original_EndScene = NULL;
-
 	Image* LoadImageFromTexture(PDIRECT3DTEXTURE9 texture) {
 		// Retrieve description of the texture surface so we can access its size
 		D3DSURFACE_DESC image_desc;
@@ -76,9 +75,8 @@ namespace ImGuiMan {
 	}
 
 	Image *LoadImageFromFile(wstring filename) {
-		// Load texture from disk
 		PDIRECT3DTEXTURE9 texture;
-		HRESULT hr = D3DXCreateTextureFromFileW(*SOKU_D3D9_DEVICE, filename.c_str(), &texture);
+		HRESULT hr = D3DXCreateTextureFromFileW(*SokuMan::D3D9DevicePtr, filename.c_str(), &texture);
 		if (hr != S_OK)
 			return NULL;
 
@@ -87,7 +85,7 @@ namespace ImGuiMan {
 
 	// Use instead of the ImGui one, for compatability with the resize mod.
 	inline void SetNextWindowPosCenter(ImGuiCond c = 0) {
-		ImGui::SetNextWindowPos(ImVec2(WINDOW_WIDTH * 0.5f, WINDOW_HEIGHT * 0.5f), c, ImVec2(0.5f, 0.5f));
+		ImGui::SetNextWindowPos(ImVec2(SokuMan::WindowWidth * 0.5f, SokuMan::WindowHeight * 0.5f), c, ImVec2(0.5f, 0.5f));
 	}
 
 	void SetupStyle() {
@@ -144,7 +142,7 @@ namespace ImGuiMan {
 
 	void RemapNav() {
 		ImGuiIO& io = ImGui::GetIO();
-		CInputManagerCluster* SokuInput = SokuAPI::GetInputManager();
+		CInputManagerCluster* SokuInput = SokuMan::GetInputManager();
 		if (SokuInput->P1.Yaxis > 0) io.NavInputs[ImGuiNavInput_DpadDown] = 1.0f;
 		if (SokuInput->P1.Yaxis < 0) io.NavInputs[ImGuiNavInput_DpadUp] = 1.0f;
 		if (SokuInput->P1.Xaxis > 0) io.NavInputs[ImGuiNavInput_DpadRight] = 1.0f;
@@ -156,7 +154,7 @@ namespace ImGuiMan {
 		if (io.KeysDown[io.KeyMap[ImGuiKey_Tab]]) io.NavInputs[ImGuiNavInput_KeyTab_] = 1.0f;
 	}
 
-	LRESULT __stdcall WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	LRESULT __stdcall Hooked_WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		ImGuiIO& io = ImGui::GetIO();
 
 		if (uMsg == WM_MOUSEMOVE) {
@@ -166,8 +164,8 @@ namespace ImGuiMan {
 			float resized_height = rect.bottom - rect.top;
 			long resized_x = (short)lParam;
 			long resized_y = (short)(lParam >> 16);
-			float correct_x = (resized_x * (WINDOW_WIDTH / resized_width));
-			float correct_y = (resized_y * (WINDOW_HEIGHT / resized_height));
+			float correct_x = (resized_x * (SokuMan::WindowWidth / resized_width));
+			float correct_y = (resized_y * (SokuMan::WindowHeight / resized_height));
 
 			io.MousePos.x = correct_x;
 			io.MousePos.y = correct_y;
@@ -178,14 +176,14 @@ namespace ImGuiMan {
 			else if (wParam == SIZE_RESTORED)
 				active = true;
 		}
-		else if (uMsg == WM_ACTIVATEAPP && !SOKU_D3DPRESENT_PARAMETERS->Windowed) {
+		else if (uMsg == WM_ACTIVATEAPP && !SokuMan::D3DPresentParams->Windowed) {
 			if(!wParam)
 				active = false;
 			else
 				active = true;
 		}
 
-		LRESULT res = CallWindowProc(oldWndProc, hWnd, uMsg, wParam, lParam);
+		LRESULT res = CallWindowProc(Original_WndProc, hWnd, uMsg, wParam, lParam);
 
 		if (!res)
 			if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam) || ImGui::GetIO().WantCaptureMouse)
@@ -211,7 +209,7 @@ namespace ImGuiMan {
 				ImGui_ImplWin32_Init(window);
 				ImGui_ImplDX9_Init(pDevice);
 
-				oldWndProc = (WNDPROC)SetWindowLongPtr(window, GWL_WNDPROC, (LONG_PTR)WndProc);
+				Original_WndProc = (WNDPROC)SetWindowLongPtr(window, GWL_WNDPROC, (LONG_PTR)Hooked_WndProc);
 
 				fontDefault = io.Fonts->AddFontDefault();
 
@@ -280,29 +278,29 @@ namespace ImGuiMan {
 		void Hook(HWND hwnd, IDirect3DDevice9* device) {
 			window = hwnd;
 			// Check if something already hooked DxReset.
-			if (*((unsigned char*)RESET_CALL_ADDR) != 0xe8) {
-				PatchMan::Patch(RESET_PATCH_ADDR, "\x68\x68\x0f\x8a\x00\x50\xe8\x00\x00\x00\x00\x90\x90", 13).Toggle(true);
-				PatchMan::HookNear(RESET_CALL_ADDR, (DWORD)Hooked_Reset);
+			if (*((uint8_t*)ResetCallAddr) != 0xe8) {
+				PatchMan::Patch(ResetPatchAddr, "\x68\x68\x0f\x8a\x00\x50\xe8\x00\x00\x00\x00\x90\x90", 13).Toggle(true);
+				PatchMan::HookNear(ResetCallAddr, (DWORD)Hooked_Reset);
 				Original_Reset = (*(ResetFn**)device)[16];
 			}
 			else {
-				Original_Reset = (ResetFn)PatchMan::HookNear(0x4151ac, (DWORD)Hooked_Reset);
+				Original_Reset = (ResetFn)PatchMan::HookNear(ResetCallAddr, (DWORD)Hooked_Reset);
 			}
 			// Check if something already hooked DxEndScene
-			if (*((unsigned char*)ENDSCENE_CALL_ADDR) != 0xe8) {
-				PatchMan::Patch(ENDSCENE_CALL_ADDR, "\xe8\x00\x00\x00\x00\x50\x90", 7).Toggle(true);
-				PatchMan::HookNear(ENDSCENE_CALL_ADDR, (DWORD)Hooked_EndScene);
+			if (*((uint8_t*)EndSceneCallAddr) != 0xe8) {
+				PatchMan::Patch(EndSceneCallAddr, "\xe8\x00\x00\x00\x00\x50\x90", 7).Toggle(true);
+				PatchMan::HookNear(EndSceneCallAddr, (DWORD)Hooked_EndScene);
 				Original_EndScene = (*(EndSceneFn**)device)[42];
 			}
 			else {
-				Original_EndScene = (EndSceneFn)PatchMan::HookNear(0x40104c, (DWORD)Hooked_EndScene);
+				Original_EndScene = (EndSceneFn)PatchMan::HookNear(EndSceneCallAddr, (DWORD)Hooked_EndScene);
 			}
 		}
 	}
 
 	bool __fastcall Hooked_SokuSetup(void** DxWinHwnd, void* EDX, HWND* hwnd) {
 		bool ret = Original_SokuSetup(DxWinHwnd, hwnd);
-		HOOK_METHOD::Hook(*hwnd, *SOKU_D3D9_DEVICE);
+		HOOK_METHOD::Hook(*hwnd, *SokuMan::D3D9DevicePtr);
 		return ret;
 	}
 
@@ -314,13 +312,13 @@ namespace ImGuiMan {
 	}
 
 	void SetupHookAsync(PassedFn load, PassedFn render) {
-		while (*SOKU_D3D9_DEVICE == 0 || *SOKU_HWND == 0)
+		while (*SokuMan::D3D9DevicePtr == 0 || *SokuMan::Hwnd == 0)
 			this_thread::sleep_for(10ms);
 
 		LoadFunction = load;
 		RenderFunction = render;
 
-		HOOK_METHOD::Hook(*SOKU_HWND, *SOKU_D3D9_DEVICE);
+		HOOK_METHOD::Hook(*SokuMan::Hwnd, *SokuMan::D3D9DevicePtr);
 	}
 }
 

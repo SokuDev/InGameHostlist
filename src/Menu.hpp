@@ -1,5 +1,5 @@
 #pragma once
-#include "SokuAPI.hpp"
+#include "SokuMan.hpp"
 #include "ImGuiMan.hpp"
 #include <string>
 #include <vector>
@@ -20,7 +20,7 @@ namespace Menu {
 	CMenuConnect *menu;
 
 	void Init() {
-		SokuAPI::HideProfiles.Toggle(true);
+		SokuMan::HideProfiles.Toggle(true);
 	}
 
 	void Load() {
@@ -32,9 +32,8 @@ namespace Menu {
 	}
 
 	void OnMenuOpen() {
-		SokuAPI::HideNativeMenu();
-
-		menu = SokuAPI::GetCMenuConnect();
+		SokuMan::HideNativeMenu();
+		menu = SokuMan::GetCMenuConnect();
 	}
 
 	void Render() {

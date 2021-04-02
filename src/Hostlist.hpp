@@ -3,9 +3,12 @@
 #include <vector>
 #include <mmsystem.h>
 #include <nlohmann/json.hpp>
-#include "Host.hpp"
-#include "SokuAPI.hpp"
+
+#include "SokuMan.hpp"
+
+#include "HostingOptions.hpp"
 #include "Status.hpp"
+#include "Host.hpp"
 
 using namespace std;
 
@@ -71,7 +74,7 @@ namespace Hostlist {
 
 		Status::OnMenuOpen();
 
-		InputManager = SokuAPI::GetInputManager();
+		InputManager = SokuMan::GetInputManager();
 	}
 
 	bool CheckForNewHosts(json &jHosts) {
@@ -108,7 +111,7 @@ namespace Hostlist {
 		if (!offline) {
 			if (newTime - oldTime >= delayTime) {
 				try {
-					string s = WebHandler::Request("https://konni.delthas.fr/games");
+					string s = WebMan::Request("https://konni.delthas.fr/games");
 					json res = json::parse(s);
 					lock_guard<mutex> lock(updatingHostlist);
 
@@ -161,7 +164,7 @@ namespace Hostlist {
 	}
 
 	void Render() {
-		if (SokuAPI::GetCMenuConnect()->Choice != 6) {
+		if (SokuMan::GetCMenuConnect()->Choice != 6) {
 			float statusSize = (Status::lines - 1) * 16;
 			if (Status::lines == 0) statusSize = 0;
 
@@ -311,19 +314,19 @@ namespace Hostlist {
 	}
 
 	void HandleInput() {
-		if (!SokuAPI::InputBlock.Check() || active) {
+		if (!SokuMan::InputBlock.Check() || active) {
 			if (InputManager->P1.Xaxis == 1 || InputManager->P1.Xaxis == -1) {
 				page_id = !page_id;
 				ip_id = 0;
 				InputManager->P1.Xaxis *= 10;
 
-				SokuAPI::SfxPlay(SFX_MOVE);
+				SokuMan::SfxPlay(SokuSFX::Move);
 			}
 			else if (InputManager->P1.D == 1) {
 				HostingOptions::equalColumnMode = !HostingOptions::equalColumnMode;
 				InputManager->P1.D *= 10;
 
-				SokuAPI::SfxPlay(SFX_SELECT);
+				SokuMan::SfxPlay(SokuSFX::Select);
 			}
 		}
 
@@ -337,7 +340,7 @@ namespace Hostlist {
 						ip_id = 0;
 					InputManager->P1.Yaxis = 10;
 
-					SokuAPI::SfxPlay(SFX_MOVE);
+					SokuMan::SfxPlay(SokuSFX::Move);
 				//Up
 				} else if (InputManager->P1.Yaxis == -1) {
 					if (ip_id == 0)
@@ -346,15 +349,15 @@ namespace Hostlist {
 						ip_id -= 1;
 					InputManager->P1.Yaxis = -10;
 
-					SokuAPI::SfxPlay(SFX_MOVE);
+					SokuMan::SfxPlay(SokuSFX::Move);
 				}
 
 				if (InputManager->P1.A == 1 && hosts[page_id].size() != 0 && ip_id < hosts[page_id].size()) {
-					SokuAPI::JoinHost(hosts[page_id][ip_id]->ip.c_str(), hosts[page_id][ip_id]->port, (page_id == PLAYING ? true : false));
+					SokuMan::JoinHost(hosts[page_id][ip_id]->ip.c_str(), hosts[page_id][ip_id]->port, (page_id == PLAYING ? true : false));
 					InputManager->P1.A = 10;
 					joining = true;
 					Status::Normal("Joining...", Status::forever);
-					SokuAPI::SfxPlay(SFX_SELECT);
+					SokuMan::SfxPlay(SokuSFX::Select);
 				}
 			}
 
@@ -364,7 +367,7 @@ namespace Hostlist {
 			// play SFX_BACK twice (first the game, then the mod), and there's
 			// no other way to check if we were joining
 			//(choice gets reset before we check)
-			if (SokuAPI::InputBlock.Check() && InputManager->P1.B == 1 && joining) {
+			if (SokuMan::InputBlock.Check() && InputManager->P1.B == 1 && joining) {
 				Status::Normal("Joining aborted.");
 				joining = false;
 				InputManager->P1.B = 10;
