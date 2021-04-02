@@ -5,7 +5,7 @@
 using namespace std;
 
 // Most of this was shamelessly yoinked from various tutorials/StackOverflow pages.
-namespace WebHandler {
+namespace WebMan {
 	namespace {
 		struct MemoryStruct {
 			char *memory;

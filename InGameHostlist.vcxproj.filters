@@ -56,19 +56,19 @@
     <ClInclude Include="src\PingMan.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\SokuAPI.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\Status.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\WebHandler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\ImGuiMan.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\DialogMan.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SokuMan.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\WebMan.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

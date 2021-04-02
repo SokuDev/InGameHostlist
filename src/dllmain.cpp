@@ -11,30 +11,25 @@
 #include <winsock2.h>
 #include <process.h>
 #include <Shlwapi.h>
-#include <curl/curl.h>
 #include <iostream>
 #include <stdio.h>
 #include <deque>
-#include <nlohmann/json.hpp>
 #include <thread>
+
 #include <imgui.h>
+#include <nlohmann/json.hpp>
 
 #include "PingMan.hpp"
-
-#include "Host.hpp"
-#include "HostingOptions.hpp"
-
-#include "WebHandler.hpp"
-
-#include "SokuAPI.hpp"
-
-#include "Menu.hpp"
-
-#include "Hostlist.hpp"
-
+#include "WebMan.hpp"
+#include "SokuMan.hpp"
 #include "ImGuiMan.hpp"
-
 #include "DialogMan.hpp"
+
+#include "HostingOptions.hpp"
+#include "Menu.hpp"
+#include "Hostlist.hpp"
+#include "Host.hpp"
+#include "Status.hpp"
 
 using namespace std;
 using json = nlohmann::json;
@@ -78,7 +73,7 @@ void HostLoop() {
 		string payload = host_payloads.front();
 		host_payloads.pop_front();
 		host_mutex.unlock();
-		string response = WebHandler::Put("https://konni.delthas.fr/games", payload);
+		string response = WebMan::Put("https://konni.delthas.fr/games", payload);
 		if (!response.empty()) {
 			Status::Error(response);
 		}
@@ -92,15 +87,15 @@ void Load() {
 }
 
 void Render() {
-	CMenuConnect* menu = SokuAPI::GetCMenuConnect();
+	CMenuConnect* menu = SokuMan::GetCMenuConnect();
 	if (menu != NULL) {
 		if (firstTime) {
 			Menu::OnMenuOpen();
 			Hostlist::OnMenuOpen();
 
 			DialogMan::DisableAll();
-			SokuAPI::InputBlock.Toggle(false);
-			SokuAPI::InputWorkaround.Toggle(true);
+			SokuMan::InputBlock.Toggle(false);
+			SokuMan::InputWorkaround.Toggle(true);
 			hosting = false;
 			inMenu = true;
 
@@ -111,7 +106,7 @@ void Render() {
 				IntroDialog->Active = true;
 			}
 		}
-		CInputManagerCluster* input = SokuAPI::GetInputManager();
+		CInputManagerCluster* input = SokuMan::GetInputManager();
 
 		// Debug window
 		if (DEBUG) {
@@ -135,23 +130,18 @@ void Render() {
 		Hostlist::Render();
 		DialogMan::Render();
 
-		bool dialogsActive = DialogMan::AnyActive();
-		if (dialogsActive) {
-			SokuAPI::InputBlock.Toggle(true);
+		if (DialogMan::AnyActive()) {
+			SokuMan::InputBlock.Toggle(true);
 		}
 		else {
 			Menu::HandleInput();
 			Hostlist::HandleInput();
 
-			//This got surprisingly messy, basic logic is that if inputs are disabled 
-			//and you press B or both of the submenus are inactive it exits out, this is
-			//mostly meant so you can't end up in situations where the inputs are fully blocked
-			//With the extra hosting options check it's looking extra messy tho.
-			if (SokuAPI::InputBlock.Check() && (input->P1.B == 1 || (!Hostlist::active && !dialogsActive))) {
+			if (SokuMan::InputBlock.Check() && (input->P1.B == 1 || !Hostlist::active)) {
 				if (!ImGui::GetIO().WantTextInput) {
 					Hostlist::active = false;
-					SokuAPI::InputBlock.Toggle(false);
-					SokuAPI::SfxPlay(SFX_BACK);
+					SokuMan::InputBlock.Toggle(false);
+					SokuMan::SfxPlay(SokuSFX::Back);
 					input->P1.B = 10;
 				}
 			}
@@ -176,17 +166,15 @@ void Init(void *unused) {
 
 	atexit(Exit);
 	
-	SokuAPI::Init();
+	SokuMan::Init();
 	
-	WebHandler::Init();
-	atexit(WebHandler::Cleanup);
+	WebMan::Init();
+	atexit(WebMan::Cleanup);
 	
 	PingMan::Init();
 	atexit(PingMan::Cleanup);
 	
 	HostingOptions::Init();
-	HostingOptions::LoadConfig();
-	
 	Menu::Init();
 	Hostlist::Init();
 	
@@ -218,8 +206,8 @@ void Init(void *unused) {
 			"Press A/B to continue.\n");
 
 		if (DialogMan::IsActivatePressed()) {
-			SokuAPI::InputBlock.Toggle(false);
-			SokuAPI::SfxPlay(SFX_SELECT);
+			SokuMan::InputBlock.Toggle(false);
+			SokuMan::SfxPlay(SokuSFX::Back);
 			return false;
 		}
 		return true;
@@ -233,12 +221,12 @@ void Init(void *unused) {
 		guiConfirm = guiConfirm || ImGui::Button("Confirm");
 		if (guiConfirm || (DialogMan::IsActivatePressed() && !ImGui::IsAnyItemFocused() && !ImGui::GetIO().WantTextInput)) {
 			Status::Normal("Hosting...", Status::forever);
-			SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
+			SokuMan::SetupHost(HostingOptions::port, HostingOptions::spectate);
 			HostingOptions::SaveConfig();
 
 			if (HostingOptions::publicHost) {
 				json data = {
-					{"profile_name", SokuAPI::GetProfileName(1)},
+					{"profile_name", SokuMan::GetProfileName(1)},
 					{"message", HostingOptions::message},
 					{"port", HostingOptions::port}
 				};
@@ -247,8 +235,8 @@ void Init(void *unused) {
 				host_mutex.unlock();
 			}
 
-			SokuAPI::InputBlock.Toggle(false);
-			SokuAPI::SfxPlay(SFX_SELECT);
+			SokuMan::InputBlock.Toggle(false);
+			SokuMan::SfxPlay(SokuSFX::Select);
 
 			hosting = true;
 			return false;
@@ -259,12 +247,12 @@ void Init(void *unused) {
 	Menu::AddItem("Host", []() {
 		if (hosting == true) {
 			Status::Normal("Host aborted.");
-			SokuAPI::ClearMenu();
+			SokuMan::ClearMenu();
 		}
 		else {
-			if (!warnedForName && SokuAPI::GetProfileName(1) == "edit me") {
+			if (!warnedForName && SokuMan::GetProfileName(1) == "edit me") {
 				Status::Error("Consider changing your profile name before hosting, or press host again.");
-				SokuAPI::ClearMenu();
+				SokuMan::ClearMenu();
 
 				warnedForName = true;
 				return;
@@ -272,16 +260,16 @@ void Init(void *unused) {
 
 			if (HostingOptions::showMessagePrompt) {
 				HostMessageDialog->Active = true;
-				SokuAPI::ClearMenu();
+				SokuMan::ClearMenu();
 				return;
 			}
 			else {
 				Status::Normal("Hosting...", Status::forever);
-				SokuAPI::SetupHost(HostingOptions::port, HostingOptions::spectate);
+				SokuMan::SetupHost(HostingOptions::port, HostingOptions::spectate);
 
 				if (HostingOptions::publicHost) {
 					json data = {
-						{"profile_name", SokuAPI::GetProfileName(1)},
+						{"profile_name", SokuMan::GetProfileName(1)},
 						{"message", HostingOptions::message},
 						{"port", HostingOptions::port}
 					};
@@ -298,19 +286,19 @@ void Init(void *unused) {
 		Hostlist::active = true;
 		// Prevents the hostlist from instantly registering the input
 		// Very ugly, but eh...
-		SokuAPI::GetInputManager()->P1.A = 10;
-		SokuAPI::InputBlock.Toggle(true);
-		SokuAPI::ClearMenu();
+		SokuMan::GetInputManager()->P1.A = 10;
+		SokuMan::InputBlock.Toggle(true);
+		SokuMan::ClearMenu();
 	});
 	
 	Menu::AddItem("Refresh", []() {
 		Hostlist::oldTime = 0;
-		SokuAPI::ClearMenu();
+		SokuMan::ClearMenu();
 	});
 	
 	Menu::AddItem("Options", []() {
 		HostingOptions::dialog->Active = true;
-		SokuAPI::ClearMenu();
+		SokuMan::ClearMenu();
 	});
 
 	ClipboardDialog = DialogMan::AddDialog("Clipboard", []() {
@@ -322,18 +310,18 @@ void Init(void *unused) {
 			Status::Normal("Joining...", Status::forever);
 
 			ImGui::CloseCurrentPopup(); 
-			SokuAPI::JoinHost(NULL, 0);
-			SokuAPI::InputBlock.Toggle(false);
-			SokuAPI::SfxPlay(SFX_SELECT);
+			SokuMan::JoinHost(NULL, 0);
+			SokuMan::InputBlock.Toggle(false);
+			SokuMan::SfxPlay(SokuSFX::Select);
 			return false;
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Spectate")) {
 			Status::Normal("Joining...", Status::forever);
 
-			SokuAPI::JoinHost(NULL, 0, true);
-			SokuAPI::InputBlock.Toggle(false);
-			SokuAPI::SfxPlay(SFX_SELECT);
+			SokuMan::JoinHost(NULL, 0, true);
+			SokuMan::InputBlock.Toggle(false);
+			SokuMan::SfxPlay(SokuSFX::Select);
 			return false;
 		}
 		return true;
@@ -341,21 +329,21 @@ void Init(void *unused) {
 	
 	Menu::AddItem("Join from clipboard", []() {
 		ClipboardDialog->Active = true;
-		SokuAPI::ClearMenu();
+		SokuMan::ClearMenu();
 	});
 	
 	Menu::AddItem("Profile select");
 	
 	Menu::AddEventHandler(Menu::Event::AlreadyPlaying, []() {
 		Status::Normal("Match in progress, spectating...");
-		SokuAPI::JoinHost(NULL, 0, true);
+		SokuMan::JoinHost(NULL, 0, true);
 	});
 	
 	Menu::AddEventHandler(Menu::Event::ConnectionFailed, []() {
 		Hostlist::joining = false;
 		Status::Error("Failed to connect.");
-		SokuAPI::SfxPlay(SFX_BACK);
-		SokuAPI::ClearMenu();
+		SokuMan::SfxPlay(SokuSFX::Back);
+		SokuMan::ClearMenu();
 	});
 	
 	printf("Init done.\n");

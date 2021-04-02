@@ -35,9 +35,9 @@
     <ClInclude Include="src\Menu.hpp" />
     <ClInclude Include="src\PatchMan.hpp" />
     <ClInclude Include="src\PingMan.hpp" />
-    <ClInclude Include="src\SokuAPI.hpp" />
+    <ClInclude Include="src\SokuMan.hpp" />
     <ClInclude Include="src\Status.hpp" />
-    <ClInclude Include="src\WebHandler.hpp" />
+    <ClInclude Include="src\WebMan.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

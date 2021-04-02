@@ -1,7 +1,5 @@
 #pragma once
-#include <fstream>
 #include <iostream>
-#include <sstream>
 #include "DialogMan.hpp"
 using namespace std;
 
@@ -45,6 +43,8 @@ namespace HostingOptions {
 	}
 
 	void Init() {
+		LoadConfig();
+
 		dialog = DialogMan::AddDialog("Hosting Options", ImGuiWindowFlags_NoResize, []() {
 			ImGui::SetCursorPosY(30);
 
