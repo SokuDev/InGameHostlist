@@ -108,7 +108,7 @@ namespace Hostlist {
 		if (!offline) {
 			if (newTime - oldTime >= delayTime) {
 				try {
-					string s = WebHandler::Request("http://delthas.fr:14762/games");
+					string s = WebHandler::Request("https://konni.delthas.fr/games");
 					json res = json::parse(s);
 					lock_guard<mutex> lock(updatingHostlist);
 

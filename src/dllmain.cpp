@@ -78,7 +78,7 @@ void HostLoop() {
 		string payload = host_payloads.front();
 		host_payloads.pop_front();
 		host_mutex.unlock();
-		string response = WebHandler::Put("http://delthas.fr:14762/games", payload);
+		string response = WebHandler::Put("https://konni.delthas.fr/games", payload);
 		if (!response.empty()) {
 			Status::Error(response);
 		}

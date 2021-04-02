@@ -280,7 +280,7 @@ namespace ImGuiMan {
 		void Hook(HWND hwnd, IDirect3DDevice9* device) {
 			window = hwnd;
 			// Check if something already hooked DxReset.
-			if (*((char*)RESET_CALL_ADDR) != 0xe8) {
+			if (*((unsigned char*)RESET_CALL_ADDR) != 0xe8) {
 				PatchMan::Patch(RESET_PATCH_ADDR, "\x68\x68\x0f\x8a\x00\x50\xe8\x00\x00\x00\x00\x90\x90", 13).Toggle(true);
 				PatchMan::HookNear(RESET_CALL_ADDR, (DWORD)Hooked_Reset);
 				Original_Reset = (*(ResetFn**)device)[16];
@@ -289,7 +289,7 @@ namespace ImGuiMan {
 				Original_Reset = (ResetFn)PatchMan::HookNear(0x4151ac, (DWORD)Hooked_Reset);
 			}
 			// Check if something already hooked DxEndScene
-			if (*((char*)ENDSCENE_CALL_ADDR) != 0xe8) {
+			if (*((unsigned char*)ENDSCENE_CALL_ADDR) != 0xe8) {
 				PatchMan::Patch(ENDSCENE_CALL_ADDR, "\xe8\x00\x00\x00\x00\x50\x90", 7).Toggle(true);
 				PatchMan::HookNear(ENDSCENE_CALL_ADDR, (DWORD)Hooked_EndScene);
 				Original_EndScene = (*(EndSceneFn**)device)[42];
