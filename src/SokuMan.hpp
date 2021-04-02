@@ -131,18 +131,6 @@ namespace SokuMan {
 		InputWorkaround.AddNOPs(0x0448f52, 8).AddNOPs(0x0448f2e, 8);
 	}
 
-#define UNKNOWN_GLOBAL 0x0089a888
-#define IN_MENU *(char *)(0x089a888 + 4)
-
-#define CMENU_OBJ (*(*((*(void ****)UNKNOWN_GLOBAL) + 1) + 2))
-#define CMENUCONNECT_VTABLE ((void*)0x00859300)
-
-#define MSGBOX_OBJ (*(void **)0x089a390)
-
-#define CINPUTMANAGERCLUSTER_OBJ ((void *)0x0089a248)
-
-#define SCENE_ID ((byte*)0x008A0044)
-
 	CMenuConnect *GetCMenuConnect() {
 		if(*SceneID == 2) {
 			if(UnknownGlobalObj->InMenuFlag) {
