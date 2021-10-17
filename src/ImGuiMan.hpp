@@ -183,12 +183,12 @@ namespace ImGuiMan {
 				active = true;
 		}
 
-		LRESULT res = CallWindowProc(Original_WndProc, hWnd, uMsg, wParam, lParam);
+		LRESULT handled = CallWindowProc(Original_WndProc, hWnd, uMsg, wParam, lParam);
 
-		if (!res)
+		if (!handled && active)
 			if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam) || ImGui::GetIO().WantCaptureMouse)
 				return true;
-		return res;
+		return handled;
 	}
 
 	int __stdcall Hooked_EndScene(IDirect3DDevice9* pDevice) {

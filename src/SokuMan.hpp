@@ -181,8 +181,7 @@ namespace SokuMan {
 	void JoinHost(const char *ip, int port, bool spectate = false) {
 		CMenuConnect *menu = GetCMenuConnect();
 		if (ip != NULL) {
-			// Unsafe
-			strcpy(menu->IPString, ip);
+			strcpy_s(menu->IPString, ip);
 			menu->Port = port;
 		}
 		menu->Choice = 2;

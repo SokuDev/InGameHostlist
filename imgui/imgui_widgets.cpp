@@ -5668,6 +5668,9 @@ bool ImGui::ListBoxHeader(const char* label, int items_count, int height_in_item
 void ImGui::ListBoxFooter()
 {
     ImGuiWindow* parent_window = GetCurrentWindow()->ParentWindow;
+    // This really shouldn't work, but it do.
+    // Fixes Win+D dxReset issue.
+    if (!parent_window) return;
     const ImRect bb = parent_window->DC.LastItemRect;
     const ImGuiStyle& style = GetStyle();
 
