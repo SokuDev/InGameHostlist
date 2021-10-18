@@ -318,13 +318,11 @@ namespace Hostlist {
 			if (InputManager->P1.Xaxis == 1 || InputManager->P1.Xaxis == -1) {
 				page_id = !page_id;
 				ip_id = 0;
-				InputManager->P1.Xaxis *= 10;
 
 				SokuMan::SfxPlay(SokuSFX::Move);
 			}
 			else if (InputManager->P1.D == 1) {
 				HostingOptions::equalColumnMode = !HostingOptions::equalColumnMode;
-				InputManager->P1.D *= 10;
 
 				SokuMan::SfxPlay(SokuSFX::Select);
 			}
@@ -338,7 +336,6 @@ namespace Hostlist {
 					ip_id += 1;
 					if (ip_id >= hosts[page_id].size())
 						ip_id = 0;
-					InputManager->P1.Yaxis = 10;
 
 					SokuMan::SfxPlay(SokuSFX::Move);
 				//Up
@@ -347,14 +344,12 @@ namespace Hostlist {
 						ip_id = hosts[page_id].size() - 1;
 					else
 						ip_id -= 1;
-					InputManager->P1.Yaxis = -10;
 
 					SokuMan::SfxPlay(SokuSFX::Move);
 				}
 
 				if (InputManager->P1.A == 1 && hosts[page_id].size() != 0 && ip_id < hosts[page_id].size()) {
 					SokuMan::JoinHost(hosts[page_id][ip_id]->ip.c_str(), hosts[page_id][ip_id]->port, (page_id == PLAYING ? true : false));
-					InputManager->P1.A = 10;
 					joining = true;
 					Status::Normal("Joining...", Status::forever);
 					SokuMan::SfxPlay(SokuSFX::Select);
@@ -370,7 +365,6 @@ namespace Hostlist {
 			if (SokuMan::InputBlock.Check() && InputManager->P1.B == 1 && joining) {
 				Status::Normal("Joining aborted.");
 				joining = false;
-				InputManager->P1.B = 10;
 			}
 		} else {
 			ip_id = 0;

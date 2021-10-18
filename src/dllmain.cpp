@@ -7,6 +7,8 @@
 #define DEBUG false
 #endif 
 
+#define VERSION "v1.3.0"
+
 #include <Windows.h>
 #include <winsock2.h>
 #include <process.h>
@@ -51,6 +53,7 @@ Dialog *IntroDialog;
 Dialog *HostMessageDialog;
 Dialog *ClipboardDialog;
 
+// Independent update thread.
 void Update() {
 	while (true) {
 		if (inMenu) {
@@ -106,7 +109,6 @@ void Render() {
 				IntroDialog->Active = true;
 			}
 		}
-		CInputManagerCluster* input = SokuMan::GetInputManager();
 
 		// Debug window
 		if (DEBUG) {
@@ -130,27 +132,40 @@ void Render() {
 		Hostlist::Render();
 		DialogMan::Render();
 
-		if (DialogMan::AnyActive()) {
-			SokuMan::InputBlock.Toggle(true);
-		}
-		else {
-			Menu::HandleInput();
-			Hostlist::HandleInput();
-
-			if (SokuMan::InputBlock.Check() && (input->P1.B == 1 || !Hostlist::active)) {
-				if (!ImGui::GetIO().WantTextInput) {
-					Hostlist::active = false;
-					SokuMan::InputBlock.Toggle(false);
-					SokuMan::SfxPlay(SokuSFX::Back);
-					input->P1.B = 10;
-				}
-			}
+		ImGui::SetNextWindowPos(ImVec2(SokuMan::WindowWidth - 135, -3));
+		if(ImGui::Begin("##version", 0, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoSavedSettings)) {
+			ImGui::Text("IGHostlist %s", VERSION);
+			ImGui::End();
 		}
 	}
 	else {
 		firstTime = true;
 		inMenu = false;
 	}
+}
+
+// Hooked Update thread.
+int __fastcall CMenuConnect_Update(CMenuConnect* menu) {
+	if (DialogMan::AnyActive()) {
+		SokuMan::InputBlock.Toggle(true);
+	}
+	else {
+		// Very hackish but I need to redo this whole thing at some point.
+		bool wasJoining = Hostlist::joining;
+
+		if(!Menu::HandleInput())
+			Hostlist::HandleInput();
+		CInputManagerCluster *input = SokuMan::GetInputManager();
+
+		if (SokuMan::InputBlock.Check() && (input->P1.B == 1 || !Hostlist::active)) {
+			if (!ImGui::GetIO().WantTextInput && !wasJoining) {
+				Hostlist::active = false;
+				SokuMan::InputBlock.Toggle(false);
+				SokuMan::SfxPlay(SokuSFX::Back);
+			}
+		}
+	}
+	return SokuMan::OldCMenuConnectUpdate(menu);
 }
 
 void Exit() {
@@ -180,6 +195,7 @@ void Init(void *unused) {
 	
 	updateThread = new thread(Update);
 	hostThread = new thread(HostLoop);
+	SokuMan::OnCMenuConnectUpdate(CMenuConnect_Update);
 	
 	if (DEBUG) {
 		AllocConsole();
@@ -284,9 +300,6 @@ void Init(void *unused) {
 	
 	Menu::AddItem("Join", []() {
 		Hostlist::active = true;
-		// Prevents the hostlist from instantly registering the input
-		// Very ugly, but eh...
-		SokuMan::GetInputManager()->P1.A = 10;
 		SokuMan::InputBlock.Toggle(true);
 		SokuMan::ClearMenu();
 	});

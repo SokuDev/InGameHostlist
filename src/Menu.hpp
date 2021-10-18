@@ -73,7 +73,7 @@ namespace Menu {
 		eventCallbacks[int(e)] = func;
 	}
 
-	void HandleInput() {
+	bool HandleInput() {
 		if (menu->Choice > 0) {
 			if (menu->Choice < menuCallbacks.size() + 1 && menu->Subchoice == 0) {
 				menuCallbacks[menu->Choice - 1]();
@@ -82,6 +82,8 @@ namespace Menu {
 			} else if (menu->Subchoice == 10) {
 				eventCallbacks[int(Event::ConnectionFailed)]();
 			}
+			return true;
 		}
+		return false;
 	}
 }; 

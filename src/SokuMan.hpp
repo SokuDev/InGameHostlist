@@ -122,6 +122,8 @@ namespace SokuMan {
 	const float WindowWidth = 646.0;
 	// Patches
 	PatchMan::MultiPatch InputBlock, HideProfiles, InputWorkaround;
+	// Variables
+	auto OldCMenuConnectUpdate = (int (__thiscall*) (CMenuConnect*))nullptr;
 
 	void Init() {
 		InputBlock.AddPatch(0x0448e4a, "\x30\xC0\x90\x90\x90").AddPatch(0x0448e5d, "\x3C\x01\x90\x90").AddPatch(0x0449120, "\x85\xC9\x90\x90");
@@ -198,5 +200,9 @@ namespace SokuMan {
 		GetMsgBox()->active = false;
 		GetCMenuConnect()->Choice = 0;
 		GetCMenuConnect()->Subchoice = 0;
+	}
+
+	void OnCMenuConnectUpdate(int (__fastcall *hook) (CMenuConnect*)) {
+		OldCMenuConnectUpdate = (int(__thiscall *) (CMenuConnect*))PatchMan::HookVTable((DWORD*)(CMenuConnectVTable) + 3, (DWORD)hook);
 	}
 }; 
