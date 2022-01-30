@@ -26,6 +26,7 @@ bool gotFirstHostlist;
 
 namespace Hostlist {
 	enum { WAITING, PLAYING, PAGE_COUNT };
+	enum { NORMAL_MODE, EQUAL_MODE, NAME_MODE, MESSAGE_MODE };
 	vector<Host *> hosts[PAGE_COUNT];
 
 	CInputManagerCluster *InputManager;
@@ -135,11 +136,6 @@ namespace Hostlist {
 					}
 
 					if (active) {
-						// Kinda hack-y but it works, WAITING is 0, PLAYING is 1
-						// so ! switches between the two, will have to be reworked later
-						if (hosts[page_id].size() == 0 && hosts[!page_id].size() != 0) {
-							page_id = !page_id;
-						}
 						if (ip_id >= hosts[page_id].size()) {
 							ip_id = hosts[page_id].size() - 1;
 						}
@@ -169,8 +165,15 @@ namespace Hostlist {
 			if (Status::lines == 0) statusSize = 0;
 
 			float nameColumnSize = 100;
-			if (HostingOptions::equalColumnMode)
+			if (HostingOptions::columnMode == EQUAL_MODE) {
 				nameColumnSize = 150;
+			} 
+			else if (HostingOptions::columnMode == NAME_MODE) {
+				nameColumnSize = 303;
+			}
+			else if (HostingOptions::columnMode == MESSAGE_MODE) {
+				nameColumnSize = 0;
+			}
 
 			ImGui::SetNextWindowPos(ImVec2(250, 85));
 			ImGui::SetNextWindowSize(ImVec2(360, 336 + statusSize));
@@ -315,14 +318,18 @@ namespace Hostlist {
 
 	void HandleInput() {
 		if (!SokuMan::InputBlock.Check() || active) {
-			if (InputManager->P1.Xaxis == 1 || InputManager->P1.Xaxis == -1) {
+			if (InputManager->P1.Xaxis == +1 || (InputManager->P1.Xaxis >= +36 && InputManager->P1.Xaxis % 6 == 0) || 
+				InputManager->P1.Xaxis == -1 || (InputManager->P1.Xaxis <= -36 && InputManager->P1.Xaxis % 6 == 0)) {
 				page_id = !page_id;
 				ip_id = 0;
 
 				SokuMan::SfxPlay(SokuSFX::Move);
 			}
 			else if (InputManager->P1.D == 1) {
-				HostingOptions::equalColumnMode = !HostingOptions::equalColumnMode;
+				HostingOptions::columnMode++;
+				if (HostingOptions::columnMode > MESSAGE_MODE || HostingOptions::columnMode < NORMAL_MODE) {
+					HostingOptions::columnMode = NORMAL_MODE;
+				}
 
 				SokuMan::SfxPlay(SokuSFX::Select);
 			}
@@ -332,14 +339,14 @@ namespace Hostlist {
 			// Normal menu inputs
 			if (!joining) {
 				//Down
-				if (InputManager->P1.Yaxis == 1) {
+				if (InputManager->P1.Yaxis == 1 || (InputManager->P1.Yaxis >= 36 && InputManager->P1.Yaxis % 6 == 0)) {
 					ip_id += 1;
 					if (ip_id >= hosts[page_id].size())
 						ip_id = 0;
 
 					SokuMan::SfxPlay(SokuSFX::Move);
 				//Up
-				} else if (InputManager->P1.Yaxis == -1) {
+				} else if (InputManager->P1.Yaxis == -1 || (InputManager->P1.Yaxis <= -36 && InputManager->P1.Yaxis % 6 == 0)) {
 					if (ip_id == 0)
 						ip_id = hosts[page_id].size() - 1;
 					else
