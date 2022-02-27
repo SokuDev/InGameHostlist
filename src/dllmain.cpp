@@ -369,7 +369,10 @@ extern "C" __declspec(dllexport) bool CheckVersion(const BYTE hash[16]) {
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
 	//Init path variables
 	wchar_t wd[MAX_PATH];
-	GetCurrentDirectoryW(MAX_PATH, wd);
+	// The game sets the working directory to the executable file folder on start
+	// -> use that as our wd instead of GetCurrentDirectory
+	GetModuleFileNameW(0, wd, MAX_PATH);
+	PathRemoveFileSpecW(wd);
 	wchar_t path[MAX_PATH];
 	GetModuleFileNameW(hMyModule, path, MAX_PATH);
 	PathRemoveFileSpecW(path);
