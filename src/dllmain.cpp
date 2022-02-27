@@ -89,10 +89,17 @@ void Load() {
 	Menu::Load();
 }
 
+bool menuInit = false;
+
 void Render() {
 	CMenuConnect* menu = SokuMan::GetCMenuConnect();
 	if (menu != NULL) {
 		if (firstTime) {
+			if(!menuInit) {
+				menuInit = true;
+				PingMan::Init();
+				atexit(PingMan::Cleanup);
+			}
 			Menu::OnMenuOpen();
 			Hostlist::OnMenuOpen();
 
@@ -185,9 +192,6 @@ void Init(void *unused) {
 	
 	WebMan::Init();
 	atexit(WebMan::Cleanup);
-	
-	PingMan::Init();
-	atexit(PingMan::Cleanup);
 	
 	HostingOptions::Init();
 	Menu::Init();
