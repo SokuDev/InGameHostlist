@@ -41,6 +41,7 @@ LARGE_INTEGER timer_frequency;
 
 bool warnedForName = false;
 bool firstRun = false;
+bool pingmanInit = false;
 
 bool firstTime = true;
 bool hosting = false;
@@ -88,11 +89,15 @@ void Load() {
 	Hostlist::Load();
 	Menu::Load();
 }
-
 void Render() {
 	CMenuConnect* menu = SokuMan::GetCMenuConnect();
 	if (menu != NULL) {
 		if (firstTime) {
+			if(!pingmanInit) {
+				pingmanInit = true;
+				PingMan::Init();
+				atexit(PingMan::Cleanup);
+			}
 			Menu::OnMenuOpen();
 			Hostlist::OnMenuOpen();
 
@@ -171,7 +176,6 @@ int __fastcall CMenuConnect_Update(CMenuConnect* menu) {
 void Exit() {
 	SokuMan::Init();
 	WebMan::Cleanup();
-	PingMan::Cleanup();
 }
 
 thread *updateThread;
@@ -183,8 +187,7 @@ void Init(void *unused) {
 
 	SokuMan::Init();
 	WebMan::Init();
-	PingMan::Init();
-	
+
 	HostingOptions::Init();
 	Menu::Init();
 	Hostlist::Init();
@@ -367,7 +370,10 @@ extern "C" __declspec(dllexport) bool CheckVersion(const BYTE hash[16]) {
 extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hParentModule) {
 	//Init path variables
 	wchar_t wd[MAX_PATH];
-	GetCurrentDirectoryW(MAX_PATH, wd);
+	// The game sets the working directory to the executable file folder on start
+	// -> use that as our wd instead of GetCurrentDirectory
+	GetModuleFileNameW(0, wd, MAX_PATH);
+	PathRemoveFileSpecW(wd);
 	wchar_t path[MAX_PATH];
 	GetModuleFileNameW(hMyModule, path, MAX_PATH);
 	PathRemoveFileSpecW(path);
