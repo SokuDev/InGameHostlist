@@ -7,7 +7,7 @@
 #define DEBUG false
 #endif 
 
-#define VERSION "v1.3.0"
+#define VERSION "v1.3.2"
 
 #include <Windows.h>
 #include <winsock2.h>
@@ -169,7 +169,9 @@ int __fastcall CMenuConnect_Update(CMenuConnect* menu) {
 }
 
 void Exit() {
-	HostingOptions::SaveConfig();
+	SokuMan::Init();
+	WebMan::Cleanup();
+	PingMan::Cleanup();
 }
 
 thread *updateThread;
@@ -179,19 +181,15 @@ thread *hookThread;
 void Init(void *unused) {
 	QueryPerformanceFrequency(&timer_frequency);
 
-	atexit(Exit);
-	
 	SokuMan::Init();
-	
 	WebMan::Init();
-	atexit(WebMan::Cleanup);
-	
 	PingMan::Init();
-	atexit(PingMan::Cleanup);
 	
 	HostingOptions::Init();
 	Menu::Init();
 	Hostlist::Init();
+
+	atexit(Exit);
 	
 	updateThread = new thread(Update);
 	hostThread = new thread(HostLoop);

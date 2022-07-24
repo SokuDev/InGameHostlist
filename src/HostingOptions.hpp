@@ -25,7 +25,7 @@ namespace HostingOptions {
 		WritePrivateProfileStringW(L"InGameHostlist", L"Hostlist", publicHost ? L"1" : L"0", &config_path[0]);
 		WritePrivateProfileStringW(L"InGameHostlist", L"PlaySfxOnNewHost", playSfxOnNewHost ? L"1" : L"0", &config_path[0]);
 		WritePrivateProfileStringW(L"InGameHostlist", L"ShowMessagePrompt", showMessagePrompt ? L"1" : L"0", &config_path[0]);
-		WritePrivateProfileStringW(L"InGameHostlist", L"ColumnMode", columnMode ? L"1" : L"0", &config_path[0]);
+		WritePrivateProfileStringW(L"InGameHostlist", L"ColumnMode", to_wstring(columnMode).c_str(), &config_path[0]);
 		WritePrivateProfileStringA("InGameHostlist", "Message", message, &std::string(config_path.begin(), config_path.end())[0]);
 	}
 
@@ -38,7 +38,7 @@ namespace HostingOptions {
 		publicHost = GetPrivateProfileIntW(L"InGameHostlist", L"Hostlist", 1, &config_path[0]) != 0;
 		playSfxOnNewHost = GetPrivateProfileIntW(L"InGameHostlist", L"PlaySfxOnNewHost", 1, &config_path[0]) != 0;
 		showMessagePrompt = GetPrivateProfileIntW(L"InGameHostlist", L"ShowMessagePrompt", 1, &config_path[0]) != 0;
-		columnMode = GetPrivateProfileIntW(L"InGameHostlist", L"ColumnMode", 1, &config_path[0]) != 0;
+		columnMode = GetPrivateProfileIntW(L"InGameHostlist", L"ColumnMode", 1, &config_path[0]);
 		GetPrivateProfileStringA("InGameHostlist", "Message", "", message, sizeof(message), &std::string(config_path.begin(), config_path.end())[0]);
 	}
 
@@ -85,6 +85,10 @@ namespace HostingOptions {
 				return false;
 			}
 			return true;
+		}, []() {
+			// Save on cancel
+			SaveConfig();
+			return false;
 		});
 	}
 };

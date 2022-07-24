@@ -13,12 +13,16 @@ struct Dialog {
 	bool Active;
 	ImGuiWindowFlags Flags;
 	DialogFunction Callback;
+	DialogFunction OnCancel;
 
 	Dialog(string title, DialogFunction callback) :
-		Title(title), Flags(0), Active(false), Callback(callback) {}
+		Title(title), Flags(0), Active(false), Callback(callback), OnCancel(nullptr) {}
 
 	Dialog(string title, ImGuiWindowFlags flags, DialogFunction callback) :
-		Title(title), Flags(flags), Active(false), Callback(callback) {}
+		Title(title), Flags(flags), Active(false), Callback(callback), OnCancel(nullptr) {}
+
+	Dialog(string title, ImGuiWindowFlags flags, DialogFunction callback, DialogFunction onCancel) :
+		Title(title), Flags(flags), Active(false), Callback(callback), OnCancel(onCancel) {}
 };
 
 namespace DialogMan {
@@ -27,6 +31,11 @@ namespace DialogMan {
 	}
 
 	list<Dialog*> dialogs;
+
+	Dialog* AddDialog(string title, ImGuiWindowFlags flags, DialogFunction callback, DialogFunction onExit) {
+		dialogs.push_back(new Dialog(title, flags, callback, onExit));
+		return dialogs.back();
+	}
 
 	Dialog *AddDialog(string title, ImGuiWindowFlags flags, DialogFunction callback) {
 		dialogs.push_back(new Dialog(title, flags, callback));
@@ -51,9 +60,9 @@ namespace DialogMan {
 
 				d->Active = d->Callback();
 
-				if (io.NavInputs[ImGuiNavInput_Cancel] && !io.WantTextInput) {
-					d->Active = false;
-				}
+				if (io.NavInputs[ImGuiNavInput_Cancel] && !io.WantTextInput)
+					d->Active = d->OnCancel != nullptr? d->OnCancel() : false;
+
 
 				ImGui::End();
 			}
