@@ -64,16 +64,14 @@ namespace LocaleMan {
 	void Init() {
 		CsvParser csv;
 
-		bool fileExists = csv.loadFile("modules-InGameHostlist-translation.csv");
+		bool fileExists = csv.loadFile("modules-InGameHostlist.csv");
 		if (fileExists) {
 			string key, value;
 			do {
 				key = csv.getNextCell();
 				value = csv.getNextCell();
-				printf("K: '%s',\nV: '%s'\n\n", key.c_str(), value.c_str());
 				Text[key] = value;
 			} while (csv.goToNextLine());
 		}
-		printf("LocaleMan: %d\n", fileExists);
 	}
 }

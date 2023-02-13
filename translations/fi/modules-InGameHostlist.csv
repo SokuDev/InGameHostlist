@@ -1,0 +1,58 @@
+IntroTitle,Algusanat
+IntroBody,"Terveh teile da tervehtulemua InGameHostlist-
+moduulah, moduulu kudai andau sinun kaxttiax
+hostulistua kizhas.
+Kaxyttoxohje:
+Axlax hosta libo liity kuni et mene azetusvalikkoh.
+Pane sie zastuavu -da kacxhomisazetukset kundoh, 
+sendaxh gu kizha ei kyzy niidy enne hostua.
+Azetuksis voibi sezho tyoxndiax hostuviesti da
+panna oma hostu naxgymaxttoxmaxkse 
+muile kizhuajile. Sen jaxlgeh voit mennax 
+hostulistalluo painamal ""Liity""
+libo hosta painamal ""Hosta"".
+Huomavo: Voit vaihtua ""Kizhatah"" da 
+""Vuotetah""-vaxlilehtiloxin vaxlil joga kohtas 
+men'uu. Musta sezho vaihta sinun proufil'unimi
+kuni et kizhua verkos. Pie vesseliax!
+
+Paina A libo B ga voit jatkua."
+HostMessageTitle,Tyoxnnax hostuviesti
+HostMessageBody,Hostuviesti
+Host,Hosta
+HostAborted,Hostu keskevytetty.
+EditMeWarning,"Ajattele tarkah sinun proufil'unimie libo paina ""Hosta"" uvvessah."
+Hosting,Hostetah...
+Join,Liity
+Refresh,Paxivitax
+Options,Azetukset
+JoinClipboard,Liity viibalehstolas
+ClipboardTitle,Viibalehstola
+ClipboardBody,Tahtotgo liittyox vai kacxuo taxdax hostuu?
+Spectate,Kacxo
+ProfileSelect,Vallicxe proufil'u
+MatchInProgress,"Kizha on menos, laxkkax kacxomah..."
+ConnectionFailed,Yhtevys meni pahoi.
+Confirm,Vahvistaa
+,
+ConnectionError,Yhtevysvirhe:
+,
+RateLimitError,Asteraja tavoitettu.
+UnknownError,Hairehviesti:
+HostlistWaiting,Vuotetah(%d)
+HostlistPlaying,Kizhatah(%d)
+HostlistName,Nimi
+HostlistMessage,Viesti
+HostlistPing,Pingu
+HostlistPlayer1,Kizhuaju 1
+HostlistPlayer2,Kizhuaju 2
+HostlistNoHosts,Hostoi on ni vouse.
+HostlistJoining,Liitytaxh...
+HostlistJoiningAborted,Liittymine keskevytetty.
+,
+OptionsPort,Zastuavu
+OptionsSpectatable,"Kachottavu?     "
+OptionsPostToBot,"Tyoxnnax botale?"
+OptionsSFX,"Hostuilmoitus?  "
+OptionsMsgPrompt,"Kyzy viestii?   "
+OptionsMsg,"Hostuviesti:    "

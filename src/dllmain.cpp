@@ -352,7 +352,6 @@ void Init(void *unused) {
 	
 	updateThread = new thread(Update);
 	hostThread = new thread(HostLoop);
-	SokuMan::OnCMenuConnectUpdate(CMenuConnect_Update);
 }
 
 extern "C" __declspec(dllexport) bool CheckVersion(const BYTE hash[16]) {
@@ -393,6 +392,8 @@ extern "C" __declspec(dllexport) bool Initialize(HMODULE hMyModule, HMODULE hPar
 	_beginthread(Init, 0, NULL);
 
 	ImGuiMan::SetupHookSync(Load, Render);
+
+	SokuMan::OnCMenuConnectUpdate(CMenuConnect_Update);
 
 	return TRUE;
 }

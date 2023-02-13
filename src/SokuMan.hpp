@@ -218,17 +218,13 @@ namespace SokuMan {
 
 struct CsvParser {
 	VC9String buffer;
-	byte buf[200]; // Size is probably ~20, but not certain
+	byte buf[300];
 
 	CsvParser() = default;
 
 	bool loadFile(const char* path) {
 		memset(this, 0, sizeof(this));
 		return SokuMan::csvLoad(this, path);
-	}
-
-	~CsvParser() {
-		SokuMan::csvDeconstructor(this);
 	}
 
 	std::string getNextCell() {

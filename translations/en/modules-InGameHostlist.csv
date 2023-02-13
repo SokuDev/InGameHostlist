@@ -1,0 +1,56 @@
+IntroTitle,Introduction,
+IntroBody,"Welcome to InGame-Hostlist,
+A mod that lets you use a hostlist from inside the game.
+
+Usage instructions:
+Before hosting/joining please go into the options menu,
+to set your port and spectate options, as the game will
+no longer propmpt you for them before each host.
+You will also find settings for your host message and
+whether you want your games to appear on the hostlist or not.\n
+After that you can enter the hostlist via the 'Join' button,
+or just host by pressing 'Host'.
+Note: For ease of viewing you can switch between the Playing
+and Waiting tabs from anywhere in the menu.
+
+Also please remember to change your profile name before playing
+online, have fun!
+
+Press A/B to continue.",
+HostMessageTitle,Please enter your host message,
+HostMessageBody,Host Message: ,
+Host,Host,
+Confirm,Confirm,
+HostAborted,Host aborted.,
+EditMeWarning,"Consider changing your profile name before hosting, or press host again.",
+Hosting,Hosting...,
+Join,Join,
+Refresh,Refresh,
+Options,Options,
+JoinClipboard,Join from clipboard,
+ClipboardTitle,Clipboard,
+ClipboardBody,Do you want to join or spectate this host?,
+Spectate,Spectate,
+ProfileSelect,Profile select,
+MatchInProgress,"Match in progress, spectating...",
+ConnectionFailed,Failed to connect.,
+ConnectionError,Connection error: ,
+RateLimitError,Rate limit reached.,
+UnknownError,Error code: ,
+HostlistWaiting,Waiting,
+HostlistPlaying,Playing,
+HostlistName,Name,
+HostlistMessage,Message,
+HostlistPing,Ping,
+HostlistPlayer1,Player 1,
+HostlistPlayer2,Player 2,
+HostlistNoHosts,There are currently no hosts.,
+HostlistJoining,Joining...,
+HostlistJoiningAborted,Joining aborted.,
+OptionsPort,Port,
+OptionsSpectatable,"Spectatable?    ",
+OptionsPostToBot,"Post to bot?    ",
+OptionsSFX,"SFX on new host?",
+OptionsMsgPrompt,"Prompt for msg? ",
+OptionsMsg,"Host Messsage:",
+OptionsLanguage,"Language:",
