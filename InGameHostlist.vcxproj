@@ -32,6 +32,7 @@
     <ClInclude Include="src\HostingOptions.hpp" />
     <ClInclude Include="src\Hostlist.hpp" />
     <ClInclude Include="src\ImGuiMan.hpp" />
+    <ClInclude Include="src\LocaleMan.hpp" />
     <ClInclude Include="src\Menu.hpp" />
     <ClInclude Include="src\PatchMan.hpp" />
     <ClInclude Include="src\PingMan.hpp" />

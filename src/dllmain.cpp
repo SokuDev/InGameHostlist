@@ -7,7 +7,7 @@
 #define DEBUG false
 #endif 
 
-#define VERSION "v1.3.2"
+#define VERSION "v1.3.3"
 
 #include <Windows.h>
 #include <winsock2.h>
@@ -26,6 +26,7 @@
 #include "SokuMan.hpp"
 #include "ImGuiMan.hpp"
 #include "DialogMan.hpp"
+#include "LocaleMan.hpp"
 
 #include "HostingOptions.hpp"
 #include "Menu.hpp"
@@ -41,7 +42,7 @@ LARGE_INTEGER timer_frequency;
 
 bool warnedForName = false;
 bool firstRun = false;
-bool pingmanInit = false;
+bool finishInit = false;
 
 bool firstTime = true;
 bool hosting = false;
@@ -89,13 +90,162 @@ void Load() {
 	Hostlist::Load();
 	Menu::Load();
 }
+
+void InitMenusAndDialogs() {
+	IntroDialog = DialogMan::AddDialog(LocaleMan::Text["IntroTitle"], []() {
+		ImGui::Text(LocaleMan::Text["IntroBody"].c_str());
+
+		if (DialogMan::IsActivatePressed()) {
+			SokuMan::InputBlock.Toggle(false);
+			SokuMan::SfxPlay(SokuSFX::Back);
+			return false;
+		}
+		return true;
+	});
+
+	HostMessageDialog = DialogMan::AddDialog(LocaleMan::Text["HostMessageTitle"], []() {
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text(LocaleMan::Text["HostMessageBody"].c_str());
+		ImGui::SameLine();
+		bool guiConfirm = ImGui::InputText("", HostingOptions::message, 256, ImGuiInputTextFlags_EnterReturnsTrue);
+		guiConfirm = guiConfirm || ImGui::Button(LocaleMan::Text["Confirm"].c_str());
+		if (guiConfirm || (DialogMan::IsActivatePressed() && !ImGui::IsAnyItemFocused() && !ImGui::GetIO().WantTextInput)) {
+			Status::Normal(LocaleMan::Text["Hosting"].c_str(), Status::forever);
+			SokuMan::SetupHost(HostingOptions::port, HostingOptions::spectate);
+			HostingOptions::SaveConfig();
+
+			if (HostingOptions::publicHost) {
+				json data = {
+					{"profile_name", SokuMan::GetProfileName(1)},
+					{"message", HostingOptions::message},
+					{"port", HostingOptions::port}
+				};
+				host_mutex.lock();
+				host_payloads.emplace_back(data.dump());
+				host_mutex.unlock();
+			}
+
+			SokuMan::InputBlock.Toggle(false);
+			SokuMan::SfxPlay(SokuSFX::Select);
+
+			hosting = true;
+			return false;
+		}
+		return true;
+	});
+
+	Menu::AddItem(LocaleMan::Text["Host"].c_str(), []() {
+		if (hosting == true) {
+			Status::Normal(LocaleMan::Text["HostAborted"].c_str());
+			SokuMan::ClearMenu();
+		}
+		else {
+			if (!warnedForName && SokuMan::GetProfileName(1) == "edit me") {
+				Status::Error(LocaleMan::Text["EditMeWarning"].c_str());
+				SokuMan::ClearMenu();
+
+				warnedForName = true;
+				return;
+			}
+
+			if (HostingOptions::showMessagePrompt) {
+				HostMessageDialog->Active = true;
+				SokuMan::ClearMenu();
+				return;
+			}
+			else {
+				Status::Normal(LocaleMan::Text["Hosting"].c_str(), Status::forever);
+				SokuMan::SetupHost(HostingOptions::port, HostingOptions::spectate);
+
+				if (HostingOptions::publicHost) {
+					json data = {
+						{"profile_name", SokuMan::GetProfileName(1)},
+						{"message", HostingOptions::message},
+						{"port", HostingOptions::port}
+					};
+					host_mutex.lock();
+					host_payloads.emplace_back(data.dump());
+					host_mutex.unlock();
+				}
+			}
+		}
+		hosting = !hosting;
+	});
+
+	Menu::AddItem(LocaleMan::Text["Join"].c_str(), []() {
+		Hostlist::active = true;
+		SokuMan::InputBlock.Toggle(true);
+		SokuMan::ClearMenu();
+	});
+
+	Menu::AddItem(LocaleMan::Text["Refresh"].c_str(), []() {
+		Hostlist::oldTime = 0;
+		SokuMan::ClearMenu();
+	});
+
+	Menu::AddItem(LocaleMan::Text["Options"].c_str(), []() {
+		HostingOptions::dialog->Active = true;
+		SokuMan::ClearMenu();
+	});
+
+	ClipboardDialog = DialogMan::AddDialog(LocaleMan::Text["ClipboardTitle"].c_str(), []() {
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text(LocaleMan::Text["ClipboardBody"].c_str());
+
+		ImGui::SetCursorPosX(100);
+		if (ImGui::Button(LocaleMan::Text["Join"].c_str())) {
+			Status::Normal(LocaleMan::Text["HostlistJoining"].c_str(), Status::forever);
+
+			ImGui::CloseCurrentPopup();
+			SokuMan::JoinHost(NULL, 0);
+			SokuMan::InputBlock.Toggle(false);
+			SokuMan::SfxPlay(SokuSFX::Select);
+			return false;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button(LocaleMan::Text["Spectate"].c_str())) {
+			Status::Normal(LocaleMan::Text["HostlistJoining"].c_str(), Status::forever);
+
+			SokuMan::JoinHost(NULL, 0, true);
+			SokuMan::InputBlock.Toggle(false);
+			SokuMan::SfxPlay(SokuSFX::Select);
+			return false;
+		}
+		return true;
+	});
+
+	Menu::AddItem(LocaleMan::Text["JoinClipboard"].c_str(), []() {
+		ClipboardDialog->Active = true;
+		SokuMan::ClearMenu();
+	});
+
+	Menu::AddItem(LocaleMan::Text["ProfileSelect"].c_str());
+
+	Menu::AddEventHandler(Menu::Event::AlreadyPlaying, []() {
+		Status::Normal(LocaleMan::Text["MatchInProgress"].c_str());
+		SokuMan::JoinHost(NULL, 0, true);
+	});
+
+	Menu::AddEventHandler(Menu::Event::ConnectionFailed, []() {
+		Hostlist::joining = false;
+		Status::Error(LocaleMan::Text["ConnectionFailed"].c_str());
+		SokuMan::SfxPlay(SokuSFX::Back);
+		SokuMan::ClearMenu();
+	});
+
+	printf("Init done.\n");
+}
+
+
 void Render() {
 	CMenuConnect* menu = SokuMan::GetCMenuConnect();
 	if (menu != NULL) {
 		if (firstTime) {
-			if(!pingmanInit) {
-				pingmanInit = true;
+			if(!finishInit) {
+				finishInit = true;
 				PingMan::Init();
+				LocaleMan::Init();
+				InitMenusAndDialogs();
 				atexit(PingMan::Cleanup);
 			}
 			Menu::OnMenuOpen();
@@ -185,6 +335,12 @@ thread *hookThread;
 void Init(void *unused) {
 	QueryPerformanceFrequency(&timer_frequency);
 
+	if (DEBUG) {
+		AllocConsole();
+		SetConsoleTitleA("InGameHostlist Debug");
+		freopen("CONOUT$", "w", stdout);
+	}
+
 	SokuMan::Init();
 	WebMan::Init();
 
@@ -197,170 +353,6 @@ void Init(void *unused) {
 	updateThread = new thread(Update);
 	hostThread = new thread(HostLoop);
 	SokuMan::OnCMenuConnectUpdate(CMenuConnect_Update);
-	
-	if (DEBUG) {
-		AllocConsole();
-		SetConsoleTitleA("InGameHostlist Debug");
-		freopen("CONOUT$", "w", stdout);
-	}
-
-	IntroDialog = DialogMan::AddDialog("Introduction", []() {
-		ImGui::Text(
-			"Welcome to InGame-Hostlist,\n"
-			"A mod that lets you use a hostlist from inside the game.\n\n"
-			"Usage instructions:\n"
-			"Before hosting/joining please go into the options menu,\n"
-			"to set your port and spectate options, as the game will\n"
-			"no longer propmpt you for them before each host.\n"
-			"You will also find settings for your host message and\n"
-			"whether you want your games to appear on the hostlist or not.\n\n"
-			"After that you can enter the hostlist via the 'Join' button,\n"
-			"or just host by pressing 'Host'.\n"
-			"Note: For ease of viewing you can switch between the Playing\n"
-			"and Waiting tabs from anywhere in the menu.\n\n"
-			"Also please remember to change your profile name before playing\n"
-			"online, have fun!\n\n"
-			"Press A/B to continue.\n");
-
-		if (DialogMan::IsActivatePressed()) {
-			SokuMan::InputBlock.Toggle(false);
-			SokuMan::SfxPlay(SokuSFX::Back);
-			return false;
-		}
-		return true;
-	});
-
-	HostMessageDialog = DialogMan::AddDialog("Please enter your host message", []() {
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("Host Message:");
-		ImGui::SameLine();
-		bool guiConfirm = ImGui::InputText("", HostingOptions::message, 256, ImGuiInputTextFlags_EnterReturnsTrue);
-		guiConfirm = guiConfirm || ImGui::Button("Confirm");
-		if (guiConfirm || (DialogMan::IsActivatePressed() && !ImGui::IsAnyItemFocused() && !ImGui::GetIO().WantTextInput)) {
-			Status::Normal("Hosting...", Status::forever);
-			SokuMan::SetupHost(HostingOptions::port, HostingOptions::spectate);
-			HostingOptions::SaveConfig();
-
-			if (HostingOptions::publicHost) {
-				json data = {
-					{"profile_name", SokuMan::GetProfileName(1)},
-					{"message", HostingOptions::message},
-					{"port", HostingOptions::port}
-				};
-				host_mutex.lock();
-				host_payloads.emplace_back(data.dump());
-				host_mutex.unlock();
-			}
-
-			SokuMan::InputBlock.Toggle(false);
-			SokuMan::SfxPlay(SokuSFX::Select);
-
-			hosting = true;
-			return false;
-		}
-		return true;
-	});
-	
-	Menu::AddItem("Host", []() {
-		if (hosting == true) {
-			Status::Normal("Host aborted.");
-			SokuMan::ClearMenu();
-		}
-		else {
-			if (!warnedForName && SokuMan::GetProfileName(1) == "edit me") {
-				Status::Error("Consider changing your profile name before hosting, or press host again.");
-				SokuMan::ClearMenu();
-
-				warnedForName = true;
-				return;
-			}
-
-			if (HostingOptions::showMessagePrompt) {
-				HostMessageDialog->Active = true;
-				SokuMan::ClearMenu();
-				return;
-			}
-			else {
-				Status::Normal("Hosting...", Status::forever);
-				SokuMan::SetupHost(HostingOptions::port, HostingOptions::spectate);
-
-				if (HostingOptions::publicHost) {
-					json data = {
-						{"profile_name", SokuMan::GetProfileName(1)},
-						{"message", HostingOptions::message},
-						{"port", HostingOptions::port}
-					};
-					host_mutex.lock();
-					host_payloads.emplace_back(data.dump());
-					host_mutex.unlock();
-				}
-			}
-		}
-		hosting = !hosting;
-	});
-	
-	Menu::AddItem("Join", []() {
-		Hostlist::active = true;
-		SokuMan::InputBlock.Toggle(true);
-		SokuMan::ClearMenu();
-	});
-	
-	Menu::AddItem("Refresh", []() {
-		Hostlist::oldTime = 0;
-		SokuMan::ClearMenu();
-	});
-	
-	Menu::AddItem("Options", []() {
-		HostingOptions::dialog->Active = true;
-		SokuMan::ClearMenu();
-	});
-
-	ClipboardDialog = DialogMan::AddDialog("Clipboard", []() {
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("Do you want to join or spectate this host?");
-
-		ImGui::SetCursorPosX(100);
-		if (ImGui::Button("Join")) {
-			Status::Normal("Joining...", Status::forever);
-
-			ImGui::CloseCurrentPopup(); 
-			SokuMan::JoinHost(NULL, 0);
-			SokuMan::InputBlock.Toggle(false);
-			SokuMan::SfxPlay(SokuSFX::Select);
-			return false;
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Spectate")) {
-			Status::Normal("Joining...", Status::forever);
-
-			SokuMan::JoinHost(NULL, 0, true);
-			SokuMan::InputBlock.Toggle(false);
-			SokuMan::SfxPlay(SokuSFX::Select);
-			return false;
-		}
-		return true;
-	});
-	
-	Menu::AddItem("Join from clipboard", []() {
-		ClipboardDialog->Active = true;
-		SokuMan::ClearMenu();
-	});
-	
-	Menu::AddItem("Profile select");
-	
-	Menu::AddEventHandler(Menu::Event::AlreadyPlaying, []() {
-		Status::Normal("Match in progress, spectating...");
-		SokuMan::JoinHost(NULL, 0, true);
-	});
-	
-	Menu::AddEventHandler(Menu::Event::ConnectionFailed, []() {
-		Hostlist::joining = false;
-		Status::Error("Failed to connect.");
-		SokuMan::SfxPlay(SokuSFX::Back);
-		SokuMan::ClearMenu();
-	});
-	
-	printf("Init done.\n");
 }
 
 extern "C" __declspec(dllexport) bool CheckVersion(const BYTE hash[16]) {

@@ -16,6 +16,11 @@ struct VC9String {
 	size_t size;
 	size_t bufsize;
 
+	VC9String() {
+		memset(this, 0, sizeof(*this));
+		this->bufsize = _BUF_SIZE - 1;
+	}
+
 	operator char* () {
 		return bufsize >= _BUF_SIZE ? body.ptr : body.buf;
 	}
@@ -111,6 +116,10 @@ namespace SokuMan {
 	const auto D3D9DevicePtr = (IDirect3DDevice9**)0x8a0e30;
 	const auto D3DPresentParams = (D3DPRESENT_PARAMETERS*)0x8a0f68;
 	const auto SfxPlay = (char (*)(int))0x43e1e0;
+	const auto csvLoad = (bool(__thiscall*)(void*, const char* csvFile))(0x0040f370);
+	const auto csvParseString = (void(__thiscall*)(void*, VC9String* output))(0x0040f7a0);
+	const auto csvNextLine = (bool(__thiscall*)(void*))(0x0040f8a0);
+	const auto csvDeconstructor = (void(__thiscall*)(void*))(0x0040ffd0);
 	// Private addresses with wrapper functions around them
 	namespace {
 		const auto HostFun = (void(__thiscall*) (CMenuConnect*))0x0446a40;
@@ -206,3 +215,29 @@ namespace SokuMan {
 		OldCMenuConnectUpdate = (int(__thiscall *) (CMenuConnect*))PatchMan::HookVTable((DWORD*)(CMenuConnectVTable) + 3, (DWORD)hook);
 	}
 }; 
+
+struct CsvParser {
+	VC9String buffer;
+	byte buf[200]; // Size is probably ~20, but not certain
+
+	CsvParser() = default;
+
+	bool loadFile(const char* path) {
+		memset(this, 0, sizeof(this));
+		return SokuMan::csvLoad(this, path);
+	}
+
+	~CsvParser() {
+		SokuMan::csvDeconstructor(this);
+	}
+
+	std::string getNextCell() {
+		VC9String temp;
+		SokuMan::csvParseString(this, &temp);
+		return string(temp);
+	}
+
+	bool goToNextLine() {
+		return SokuMan::csvNextLine(this);
+	}
+};

@@ -147,9 +147,9 @@ namespace Hostlist {
 					delayTime = LONG_WAITTIME;
 				} catch (int e) {
 					if (e == 429)
-						Status::Error("Rate limit reached");
+						Status::Error(LocaleMan::Text["RateLimitError"].c_str());
 					else
-						Status::Error("Error code: " + to_string(e));
+						Status::Error(LocaleMan::Text["UnknownError"].c_str() + to_string(e));
 					delayTime = LONG_WAITTIME;
 				}
 
@@ -199,11 +199,11 @@ namespace Hostlist {
 			updatingHostlist.lock();
 
 			ImGui::SetCursorPosX(95); 
-			ImGui::TextColored((page_id == WAITING) ? colorNormal : colorGrayedOut, "Waiting(%d)", hosts[WAITING].size());
+			ImGui::TextColored((page_id == WAITING) ? colorNormal : colorGrayedOut, LocaleMan::Text["HostlistWaiting"].c_str(), hosts[WAITING].size());
 			ImGui::SameLine();
 			ImGui::Text(" / ");
 			ImGui::SameLine();
-			ImGui::TextColored((page_id == PLAYING) ? colorNormal : colorGrayedOut, "Playing(%d)", hosts[PLAYING].size());
+			ImGui::TextColored((page_id == PLAYING) ? colorNormal : colorGrayedOut, LocaleMan::Text["HostlistPlaying"].c_str(), hosts[PLAYING].size());
 
 			if (page_id == WAITING) {
 				ImGui::Columns(3, "waiting");
@@ -213,11 +213,11 @@ namespace Hostlist {
 				//Close to the border lol
 				ImGui::SetColumnWidth(2, 32);
 				ImGui::Separator();
-				ImGui::Text("Name");
+				ImGui::Text(LocaleMan::Text["HostlistName"].c_str());
 				ImGui::NextColumn();
-				ImGui::Text("Message");
+				ImGui::Text(LocaleMan::Text["HostlistMessage"].c_str());
 				ImGui::NextColumn();
-				ImGui::Text("Ping");
+				ImGui::Text(LocaleMan::Text["HostlistPing"].c_str());
 				ImGui::NextColumn();
 
 				if (hosts[WAITING].size() > 0) {
@@ -253,11 +253,11 @@ namespace Hostlist {
 				ImGui::SetColumnWidth(1, 153);
 				ImGui::SetColumnWidth(2, 32);
 				ImGui::Separator();
-				ImGui::Text("Player 1");
+				ImGui::Text(LocaleMan::Text["HostlistPlayer1"].c_str());
 				ImGui::NextColumn();
-				ImGui::Text("Player 2");
+				ImGui::Text(LocaleMan::Text["HostlistPlayer2"].c_str());
 				ImGui::NextColumn();
-				ImGui::Text("Ping");
+				ImGui::Text(LocaleMan::Text["HostlistPing"].c_str());
 				ImGui::NextColumn();
 
 				if (hosts[PLAYING].size() > 0) {
@@ -291,7 +291,7 @@ namespace Hostlist {
 				ImGui::Columns(1);
 				ImGui::Separator();
 
-				ImGui::Text("There are currently no hosts.");
+				ImGui::Text(LocaleMan::Text["HostlistNoHosts"].c_str());
 			}
 
 			updatingHostlist.unlock();
@@ -358,7 +358,7 @@ namespace Hostlist {
 				if (InputManager->P1.A == 1 && hosts[page_id].size() != 0 && ip_id < hosts[page_id].size()) {
 					SokuMan::JoinHost(hosts[page_id][ip_id]->ip.c_str(), hosts[page_id][ip_id]->port, (page_id == PLAYING ? true : false));
 					joining = true;
-					Status::Normal("Joining...", Status::forever);
+					Status::Normal(LocaleMan::Text["HostlistJoining"], Status::forever);
 					SokuMan::SfxPlay(SokuSFX::Select);
 				}
 			}
@@ -370,7 +370,7 @@ namespace Hostlist {
 			// no other way to check if we were joining
 			//(choice gets reset before we check)
 			if (SokuMan::InputBlock.Check() && InputManager->P1.B == 1 && joining) {
-				Status::Normal("Joining aborted.");
+				Status::Normal(LocaleMan::Text["HostlistJoiningAborted"]);
 				joining = false;
 			}
 		} else {

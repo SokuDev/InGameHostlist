@@ -218,7 +218,7 @@ namespace ImGuiMan {
 
 				SetupStyle();
 
-				if (DEBUG) printf("Imgui init done.");
+				if (DEBUG) printf("Imgui init done.\n");
 			}
 
 			ImGui_ImplDX9_NewFrame();
