@@ -86,16 +86,16 @@ namespace PingMan {
 	}
 
 	int SocketReceive(long *ip) {
-		char response;
+		char response[255];
 		SOCKADDR_IN addr;
 		int addr_len = sizeof(addr);
 		// non blocking recvfrom b/c of socket receive timeout
-		if (recvfrom(sock, &response, sizeof(response), NULL, (SOCKADDR *)&addr, &addr_len) < 0) {
+		if (recvfrom(sock, response, sizeof(response), NULL, (SOCKADDR *)&addr, &addr_len) < 0) {
 			printf("[WinSock] recvfrom() failed with error code : %d.\n", WSAGetLastError());
 			return ERROR_RECVFROMFAILED;
 		}
 
-		if (response == PACKET_OLLEH) {
+		if (response[0] == PACKET_OLLEH) {
 			*ip = addr.sin_addr.S_un.S_addr;
 			return 0;
 		} else
