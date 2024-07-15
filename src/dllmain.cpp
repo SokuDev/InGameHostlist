@@ -7,7 +7,7 @@
 #define DEBUG false
 #endif 
 
-#define VERSION "v1.3.3"
+#define VERSION "v1.3.4"
 
 #include <Windows.h>
 #include <winsock2.h>

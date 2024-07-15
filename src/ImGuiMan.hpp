@@ -209,7 +209,7 @@ namespace ImGuiMan {
 				ImGui_ImplWin32_Init(window);
 				ImGui_ImplDX9_Init(pDevice);
 
-				Original_WndProc = (WNDPROC)SetWindowLongPtr(window, GWL_WNDPROC, (LONG_PTR)Hooked_WndProc);
+				Original_WndProc = (WNDPROC)SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)Hooked_WndProc);
 
 				fontDefault = io.Fonts->AddFontDefault();
 
