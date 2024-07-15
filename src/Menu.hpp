@@ -82,6 +82,11 @@ namespace Menu {
 			} else if (menu->Subchoice == 10) {
 				eventCallbacks[int(Event::ConnectionFailed)]();
 			}
+
+			// Hosting, let people change hostlist pages
+			if (menu->Choice == 1 && menu->Subchoice == 2)
+				return false;
+
 			return true;
 		}
 		return false;
