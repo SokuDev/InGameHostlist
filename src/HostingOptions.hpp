@@ -56,27 +56,27 @@ namespace HostingOptions {
 			ImGui::PopItemWidth();
 
 			ImGui::AlignTextToFramePadding();
-			ImGui::Text("Spectatable?    ");
+			ImGui::Text("Spectatable?     ");
 			ImGui::SameLine();
 			ImGui::Checkbox("##spec", &spectate);
 
 			ImGui::AlignTextToFramePadding();
-			ImGui::Text("Post to bot?    ");
+			ImGui::Text("Post to hostlist?");
 			ImGui::SameLine();
 			ImGui::Checkbox("##public", &publicHost);
 
 			ImGui::AlignTextToFramePadding();
-			ImGui::Text("SFX on new host?");
+			ImGui::Text("SFX on new host? ");
 			ImGui::SameLine();
 			ImGui::Checkbox("##sfx", &playSfxOnNewHost);
 
 			ImGui::AlignTextToFramePadding();
-			ImGui::Text("Prompt for msg? ");
+			ImGui::Text("Prompt for msg?  ");
 			ImGui::SameLine();
 			ImGui::Checkbox("##static", &showMessagePrompt);
 
 			ImGui::Text("Host message:");
-			ImGui::PushItemWidth(130);
+			ImGui::PushItemWidth(145);
 			ImGui::InputText("##msg", message, 255);
 			ImGui::PopItemWidth();
 			
